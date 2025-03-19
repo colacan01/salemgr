@@ -1,0 +1,154 @@
+<!-- filepath: /Users/colacan/Source/dev/python/salemgr/inventory/templates/inventory/stock_receipt_detail.html -->
+{% extends 'base.html' %}
+
+{% block title %}입고 상세 - {{ receipt.product.name }} - 화장품 매장 관리 시스템{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-0">입고 상세 정보</h1>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'inventory:stock_receipt_list' %}">입고 목록</a></li>
+                <li class="breadcrumb-item active">{{ receipt.receipt_date|date:"Y-m-d" }} - {{ receipt.product.name }}</li>
+            </ol>
+        </nav>
+    </div>
+    <div class="btn-group">
+        <a href="{% url 'inventory:stock_receipt_update' receipt.id %}" class="btn btn-outline-primary">
+            <i class="bi bi-pencil"></i> 수정
+        </a>
+        {% if user.user_type == 'app_admin' or user.user_type == 'store_manager' %}
+        <a href="{% url 'inventory:stock_receipt_delete' receipt.id %}" class="btn btn-outline-danger">
+            <i class="bi bi-trash"></i> 삭제
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row">
+    <!-- 입고 정보 -->
+    <div class="col-md-8 mb-4">
+        <div class="card h-100">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">입고 정보</h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <table class="table">
+                            <tbody>
+                                <tr>
+                                    <th style="width: 35%">입고일</th>
+                                    <td>{{ receipt.receipt_date|date:"Y-m-d" }}</td>
+                                </tr>
+                                <tr>
+                                    <th>입고번호</th>
+                                    <td>{{ receipt.receipt_number|default:"-" }}</td>
+                                </tr>
+                                <tr>
+                                    <th>매장</th>
+                                    <td>{{ receipt.store.name }}</td>
+                                </tr>
+                                <tr>
+                                    <th>등록자</th>
+                                    <td>{{ receipt.created_by.username }}</td>
+                                </tr>
+                                <tr>
+                                    <th>등록일시</th>
+                                    <td>{{ receipt.created_at|date:"Y-m-d H:i" }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="alert alert-info mb-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span>입고 수량:</span>
+                                <span class="fs-4 fw-bold">{{ receipt.quantity }}개</span>
+                            </div>
+                        </div>
+                        <div class="alert alert-success">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span>매입 가격:</span>
+                                <span class="fs-4 fw-bold">{{ receipt.cost_price|floatformat:0 }}원</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                {% if receipt.note %}
+                <div class="mt-3">
+                    <h6>비고</h6>
+                    <p class="p-3 bg-light rounded">{{ receipt.note|linebreaks }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- 상품 정보 -->
+    <div class="col-md-4 mb-4">
+        <div class="card h-100">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">상품 정보</h5>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-4">
+                    {% if receipt.product.image %}
+                        <img src="{{ receipt.product.image.url }}" alt="{{ receipt.product.name }}" class="img-fluid rounded" style="max-height: 150px;">
+                    {% else %}
+                        <div class="bg-light text-center p-5 rounded">
+                            <i class="bi bi-image text-muted" style="font-size: 3rem;"></i>
+                            <p class="mt-2 text-muted">이미지 없음</p>
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <h5><a href="{% url 'inventory:product_detail' receipt.product.id %}" class="text-decoration-none">{{ receipt.product.name }}</a></h5>
+                <p class="text-muted mb-3">코드: {{ receipt.product.code }}</p>
+                
+                <table class="table table-sm">
+                    <tbody>
+                        <tr>
+                            <th style="width: 40%">카테고리</th>
+                            <td>{% if receipt.product.category %}{{ receipt.product.category.name }}{% else %}-{% endif %}</td>
+                        </tr>
+                        <tr>
+                            <th>현재 판매가</th>
+                            <td>{% if receipt.product.get_current_price %}{{ receipt.product.get_current_price|floatformat:0 }}원{% else %}<span class="text-danger">미설정</span>{% endif %}</td>
+                        </tr>
+                        <tr>
+                            <th>현재 재고</th>
+                            <td>
+                                <a href="{% url 'inventory:stock_status' %}?search={{ receipt.product.code }}" class="text-decoration-none">
+                                    {{ receipt.product.get_current_stock }}개
+                                </a>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>상태</th>
+                            <td>
+                                {% if receipt.product.is_active %}
+                                    <span class="badge bg-success">판매중</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">비활성</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="d-flex justify-content-between mt-3">
+    <a href="{% url 'inventory:stock_receipt_list' %}" class="btn btn-secondary">
+        <i class="bi bi-arrow-left"></i> 입고 목록으로 돌아가기
+    </a>
+    <a href="{% url 'inventory:product_detail' receipt.product.id %}" class="btn btn-outline-primary">
+        <i class="bi bi-box"></i> 상품 상세 보기
+    </a>
+</div>
+{% endblock %}

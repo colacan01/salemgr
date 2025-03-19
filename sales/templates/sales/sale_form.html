@@ -1,0 +1,697 @@
+{% extends 'base.html' %}
+
+{% block title %}
+    {% if is_update %}판매 정보 수정{% else %}새 판매 등록{% endif %} - 화장품 매장 관리 시스템
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0">{% if is_update %}판매 정보 수정{% else %}새 판매 등록{% endif %}</h1>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'sales:sale_list' %}">판매 목록</a></li>
+                    {% if is_update %}
+                        <li class="breadcrumb-item"><a href="{% url 'sales:sale_detail' form.instance.id %}">판매 상세</a></li>
+                        <li class="breadcrumb-item active">수정</li>
+                    {% else %}
+                        <li class="breadcrumb-item active">판매 등록</li>
+                    {% endif %}
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <form method="post" id="saleForm">
+        {% csrf_token %}
+        <div class="row">
+            <!-- 판매 정보 -->
+            <div class="col-md-4 mb-4">
+                <div class="card h-100">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">고객 및 판매 정보</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="{{ form.store.id_for_label }}" class="form-label">판매 매장*</label>
+                                {{ form.store }}
+                                {% if form.store.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.store.errors|join:", " }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="{{ form.sale_date.id_for_label }}" class="form-label">판매 일시*</label>
+                                {{ form.sale_date }}
+                                {% if form.sale_date.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.sale_date.errors|join:", " }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="{{ form.customer_name.id_for_label }}" class="form-label">고객명</label>
+                                {{ form.customer_name }}
+                                {% if form.customer_name.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.customer_name.errors|join:", " }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="{{ form.customer_phone.id_for_label }}" class="form-label">고객 연락처</label>
+                                {{ form.customer_phone }}
+                                {% if form.customer_phone.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.customer_phone.errors|join:", " }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.payment_method.id_for_label }}" class="form-label">결제 방식*</label>
+                            {{ form.payment_method }}
+                            {% if form.payment_method.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.payment_method.errors|join:", " }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.discount_amount.id_for_label }}" class="form-label">할인 금액</label>
+                            <div class="input-group">
+                                {{ form.discount_amount }}
+                                <span class="input-group-text">원</span>
+                            </div>
+                            {% if form.discount_amount.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.discount_amount.errors|join:", " }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.notes.id_for_label }}" class="form-label">비고</label>
+                            {{ form.notes }}
+                            {% if form.notes.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.notes.errors|join:", " }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 판매 상품 목록 -->
+            <div class="col-md-8 mb-4">
+                <div class="card h-100">
+                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">판매 상품 목록</h5>
+                        <button type="button" class="btn btn-sm btn-light" id="addItemBtn">
+                            <i class="bi bi-plus"></i> 상품 추가
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <!-- 상품 검색 -->
+                        <div class="mb-3">
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="productSearch" placeholder="상품명 또는 코드 검색">
+                                <button class="btn btn-outline-secondary" type="button" id="productSearchBtn">
+                                    <i class="bi bi-search"></i>
+                                </button>
+                            </div>
+                            <div id="productSearchResults" class="list-group mt-2 d-none">
+                                <!-- 검색 결과가 여기에 동적으로 추가됨 -->
+                            </div>
+                        </div>
+
+                        <!-- 상품 목록 폼셋 -->
+                        <table class="table table-hover" id="itemTable">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>상품</th>
+                                    <th>단가</th>
+                                    <th style="width: 100px;">수량</th>
+                                    <th>할인</th>
+                                    <th>소계</th>
+                                    <th style="width: 50px;"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="itemTableBody">
+                                {{ item_formset.management_form }}
+                                {% for form in item_formset.forms %}
+                                    <tr class="item-row">
+                                        <td>
+                                            {{ form.id }}
+                                            {{ form.product }}
+                                            {% if form.product.errors %}
+                                                <div class="invalid-feedback d-block">
+                                                    {{ form.product.errors|join:", " }}
+                                                </div>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <div class="input-group input-group-sm">
+                                                {{ form.price }}
+                                                <span class="input-group-text">원</span>
+                                            </div>
+                                            {% if form.price.errors %}
+                                                <div class="invalid-feedback d-block">
+                                                    {{ form.price.errors|join:", " }}
+                                                </div>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {{ form.quantity }}
+                                            {% if form.quantity.errors %}
+                                                <div class="invalid-feedback d-block">
+                                                    {{ form.quantity.errors|join:", " }}
+                                                </div>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <div class="input-group input-group-sm">
+                                                {{ form.discount }}
+                                                <span class="input-group-text">원</span>
+                                            </div>
+                                            {% if form.discount.errors %}
+                                                <div class="invalid-feedback d-block">
+                                                    {{ form.discount.errors|join:", " }}
+                                                </div>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <span class="subtotal">0</span>원
+                                        </td>
+                                        <td>
+                                            {% if form.instance.pk %}
+                                                {{ form.DELETE }}
+                                                <button type="button" class="btn btn-sm btn-outline-danger remove-item">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            {% else %}
+                                                <button type="button" class="btn btn-sm btn-outline-danger remove-item">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+
+                        <!-- 합계 -->
+                        <div class="row mt-4">
+                            <div class="col-md-6 offset-md-6">
+                                <table class="table table-bordered">
+                                    <tr>
+                                        <th class="table-light">상품 합계</th>
+                                        <td class="text-end" id="totalAmount">0원</td>
+                                    </tr>
+                                    <tr>
+                                        <th class="table-light">할인 금액</th>
+                                        <td class="text-end" id="discountAmount">0원</td>
+                                    </tr>
+                                    <tr class="table-primary">
+                                        <th>최종 결제액</th>
+                                        <td class="text-end" id="finalAmount">0원</td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 결제 정보 -->
+            <div class="col-md-12 mb-4">
+                <div class="card">
+                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">결제 정보</h5>
+                        <button type="button" class="btn btn-sm btn-light" id="addPaymentBtn">
+                            <i class="bi bi-plus"></i> 결제 추가
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-hover" id="paymentTable">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>결제 유형</th>
+                                    <th>결제 금액</th>
+                                    <th>결제 상세 정보</th>
+                                    <th style="width: 50px;"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="paymentTableBody">
+                                {{ payment_formset.management_form }}
+                                {% for form in payment_formset.forms %}
+                                    <tr class="payment-row">
+                                        <td style="width: 25%;">
+                                            {{ form.id }}
+                                            {{ form.payment_type }}
+                                            {% if form.payment_type.errors %}
+                                                <div class="invalid-feedback d-block">
+                                                    {{ form.payment_type.errors|join:", " }}
+                                                </div>
+                                            {% endif %}
+                                        </td>
+                                        <td style="width: 25%;">
+                                            <div class="input-group">
+                                                {{ form.amount }}
+                                                <span class="input-group-text">원</span>
+                                            </div>
+                                            {% if form.amount.errors %}
+                                                <div class="invalid-feedback d-block">
+                                                    {{ form.amount.errors|join:", " }}
+                                                </div>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {{ form.payment_details }}
+                                            {% if form.payment_details.errors %}
+                                                <div class="invalid-feedback d-block">
+                                                    {{ form.payment_details.errors|join:", " }}
+                                                </div>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if form.instance.pk %}
+                                                {{ form.DELETE }}
+                                                <button type="button" class="btn btn-sm btn-outline-danger remove-payment">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            {% else %}
+                                                <button type="button" class="btn btn-sm btn-outline-danger remove-payment">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 하단 버튼 -->
+        <div class="d-flex justify-content-between mb-4">
+            <a href="{% if is_update %}{% url 'sales:sale_detail' form.instance.id %}{% else %}{% url 'sales:sale_list' %}{% endif %}" class="btn btn-secondary">
+                취소
+            </a>
+            <button type="submit" class="btn btn-primary" id="submitBtn">
+                {% if is_update %}변경사항 저장{% else %}판매 등록{% endif %}
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // 초기화
+        updateTotals();
+        
+        // 폼셋 관리를 위한 변수들
+        const itemTable = document.getElementById('itemTableBody');
+        const paymentTable = document.getElementById('paymentTableBody');
+        const itemFormPrefix = '{{ item_formset.prefix }}';
+        const paymentFormPrefix = '{{ payment_formset.prefix }}';
+        let itemFormCount = {{ item_formset.total_form_count }};
+        let paymentFormCount = {{ payment_formset.total_form_count }};
+
+        // 상품 추가 버튼 클릭 이벤트
+        document.getElementById('addItemBtn').addEventListener('click', function() {
+            addItemRow();
+        });
+
+        // 결제 추가 버튼 클릭 이벤트
+        document.getElementById('addPaymentBtn').addEventListener('click', function() {
+            addPaymentRow();
+        });
+
+        // 상품 행 삭제 이벤트 추가
+        document.querySelectorAll('.remove-item').forEach(btn => {
+            btn.addEventListener('click', function() {
+                removeItemRow(this);
+            });
+        });
+
+        // 결제 행 삭제 이벤트 추가
+        document.querySelectorAll('.remove-payment').forEach(btn => {
+            btn.addEventListener('click', function() {
+                removePaymentRow(this);
+            });
+        });
+
+        // 상품 검색 버튼 클릭 이벤트
+        document.getElementById('productSearchBtn').addEventListener('click', function() {
+            searchProducts();
+        });
+
+        // 상품 검색 입력 이벤트 (엔터키)
+        document.getElementById('productSearch').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                searchProducts();
+            }
+        });
+
+        // 수량, 가격, 할인 변경 시 소계 업데이트
+        document.querySelectorAll('.item-row input').forEach(input => {
+            input.addEventListener('change', function() {
+                updateRowSubtotal(this.closest('.item-row'));
+                updateTotals();
+            });
+        });
+
+        // 할인 금액 변경 시 합계 업데이트
+        document.querySelector('[name="discount_amount"]').addEventListener('change', function() {
+            updateTotals();
+        });
+
+        // 상품 추가 행 함수
+        function addItemRow() {
+            const newRow = document.createElement('tr');
+            newRow.className = 'item-row';
+            
+            // 필터링된 제품 목록을 사용
+            const productOptions = `
+                <option value="">-- 상품 선택 --</option>
+                {% for product in products %}
+                    <option value="{{ product.id }}">{{ product.code }} - {{ product.name }}{% if product.store %} ({{ product.store.name }}){% endif %}</option>
+                {% endfor %}
+            `;
+            
+            // 템플릿 내 select 엘리먼트에 옵션 추가
+            const template = `
+                <td>
+                    <select name="${itemFormPrefix}-${itemFormCount}-product" id="${itemFormPrefix}-${itemFormCount}-product" class="form-select">
+                        ${productOptions}
+                    </select>
+                </td>
+                <td>
+                    <div class="input-group input-group-sm">
+                        <input type="number" name="${itemFormPrefix}-${itemFormCount}-price" id="${itemFormPrefix}-${itemFormCount}-price" class="form-control" value="0" min="0">
+                        <span class="input-group-text">원</span>
+                    </div>
+                </td>
+                <td>
+                    <input type="number" name="${itemFormPrefix}-${itemFormCount}-quantity" id="${itemFormPrefix}-${itemFormCount}-quantity" class="form-control form-control-sm" value="1" min="1">
+                </td>
+                <td>
+                    <div class="input-group input-group-sm">
+                        <input type="number" name="${itemFormPrefix}-${itemFormCount}-discount" id="${itemFormPrefix}-${itemFormCount}-discount" class="form-control" value="0" min="0">
+                        <span class="input-group-text">원</span>
+                    </div>
+                </td>
+                <td>
+                    <span class="subtotal">0</span>원
+                </td>
+                <td>
+                    <button type="button" class="btn btn-sm btn-outline-danger remove-item">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </td>
+            `;
+            
+            newRow.innerHTML = template;
+            itemTable.appendChild(newRow);
+            
+            // 이벤트 리스너 추가
+            newRow.querySelector('.remove-item').addEventListener('click', function() {
+                removeItemRow(this);
+            });
+            
+            newRow.querySelectorAll('input').forEach(input => {
+                input.addEventListener('change', function() {
+                    updateRowSubtotal(newRow);
+                    updateTotals();
+                });
+            });
+            
+            // 상품 선택 시 가격 자동 설정
+            newRow.querySelector('select').addEventListener('change', function() {
+                const productId = this.value;
+                if (productId) {
+                    fetch(`/sales/api/product-info/?product_id=${productId}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.price) {
+                                newRow.querySelector('[name$="-price"]').value = data.price;
+                                updateRowSubtotal(newRow);
+                                updateTotals();
+                            }
+                        });
+                }
+            });
+            
+            // 폼셋 카운트 업데이트
+            itemFormCount += 1;
+            document.querySelector(`#${itemFormPrefix}-TOTAL_FORMS`).value = itemFormCount;
+        }
+
+        // 결제 추가 행 함수
+        function addPaymentRow() {
+            const newRow = document.createElement('tr');
+            newRow.className = 'payment-row';
+            
+            const template = `
+                <td style="width: 25%;">
+                    <select name="${paymentFormPrefix}-${paymentFormCount}-payment_type" id="${paymentFormPrefix}-${paymentFormCount}-payment_type" class="form-select">
+                        <option value="cash">현금</option>
+                        <option value="card" selected>신용카드</option>
+                        <option value="card_installment">카드 할부</option>
+                        <option value="mobile">모바일 결제</option>
+                        <option value="transfer">계좌이체</option>
+                        <option value="gift_card">상품권</option>
+                        <option value="point">포인트</option>
+                        <option value="other">기타</option>
+                    </select>
+                </td>
+                <td style="width: 25%;">
+                    <div class="input-group">
+                        <input type="number" name="${paymentFormPrefix}-${paymentFormCount}-amount" id="${paymentFormPrefix}-${paymentFormCount}-amount" class="form-control" value="0" min="0">
+                        <span class="input-group-text">원</span>
+                    </div>
+                </td>
+                <td>
+                    <input type="text" name="${paymentFormPrefix}-${paymentFormCount}-payment_details" id="${paymentFormPrefix}-${paymentFormCount}-payment_details" class="form-control" placeholder="결제 세부 정보">
+                </td>
+                <td>
+                    <button type="button" class="btn btn-sm btn-outline-danger remove-payment">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </td>
+            `;
+            
+            newRow.innerHTML = template;
+            paymentTable.appendChild(newRow);
+            
+            // 이벤트 리스너 추가
+            newRow.querySelector('.remove-payment').addEventListener('click', function() {
+                removePaymentRow(this);
+            });
+            
+            // 폼셋 카운트 업데이트
+            paymentFormCount += 1;
+            document.querySelector(`#${paymentFormPrefix}-TOTAL_FORMS`).value = paymentFormCount;
+        }
+
+        // 상품 행 제거 함수
+        function removeItemRow(button) {
+            const row = button.closest('.item-row');
+            const deleteInput = row.querySelector('input[name$="-DELETE"]');
+            
+            if (deleteInput) {
+                // 기존 행인 경우 숨기고 DELETE 필드 체크
+                deleteInput.value = 'on';
+                row.style.display = 'none';
+            } else {
+                // 새 행인 경우 직접 제거
+                row.remove();
+            }
+            
+            updateTotals();
+        }
+
+        // 결제 행 제거 함수
+        function removePaymentRow(button) {
+            const row = button.closest('.payment-row');
+            const deleteInput = row.querySelector('input[name$="-DELETE"]');
+            
+            if (deleteInput) {
+                // 기존 행인 경우 숨기고 DELETE 필드 체크
+                deleteInput.value = 'on';
+                row.style.display = 'none';
+            } else {
+                // 새 행인 경우 직접 제거
+                row.remove();
+            }
+        }
+
+        // 상품 행의 소계 업데이트 함수
+        function updateRowSubtotal(row) {
+            const price = parseFloat(row.querySelector('[name$="-price"]').value) || 0;
+            const quantity = parseInt(row.querySelector('[name$="-quantity"]').value) || 0;
+            const discount = parseFloat(row.querySelector('[name$="-discount"]').value) || 0;
+            
+            const subtotal = (price * quantity) - discount;
+            row.querySelector('.subtotal').textContent = subtotal.toLocaleString();
+        }
+
+        // 전체 금액 업데이트 함수
+        function updateTotals() {
+            let total = 0;
+            
+            document.querySelectorAll('.item-row').forEach(row => {
+                if (row.style.display !== 'none') {
+                    const subtotal = parseFloat(row.querySelector('.subtotal').textContent.replace(/,/g, '')) || 0;
+                    total += subtotal;
+                }
+            });
+            
+            const discount = parseFloat(document.querySelector('[name="discount_amount"]').value) || 0;
+            const final = total - discount;
+            
+            document.getElementById('totalAmount').textContent = total.toLocaleString() + '원';
+            document.getElementById('discountAmount').textContent = discount.toLocaleString() + '원';
+            document.getElementById('finalAmount').textContent = final.toLocaleString() + '원';
+        }
+
+        // 상품 검색 함수
+        function searchProducts() {
+            const searchInput = document.getElementById('productSearch');
+            const searchTerm = searchInput.value.trim();
+            const resultsDiv = document.getElementById('productSearchResults');
+            
+            if (searchTerm.length < 2) {
+                resultsDiv.classList.add('d-none');
+                return;
+            }
+            
+            // 실제 구현에서는 AJAX 요청으로 서버에서 검색 결과를 가져옴
+            // 여기서는 간단하게 클라이언트 사이드에서 필터링
+            const products = [
+                {% for product in products %}
+                    {
+                        id: {{ product.id }},
+                        name: "{{ product.name }}",
+                        code: "{{ product.code }}",
+                        store: "{% if product.store %}{{ product.store.name }}{% else %}전체{% endif %}",
+                        price: {{ product.get_current_price|default:0 }}
+                    },
+                {% endfor %}
+            ];
+            
+            const filteredProducts = products.filter(product => 
+                product.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                product.code.toLowerCase().includes(searchTerm.toLowerCase())
+            );
+            
+            resultsDiv.innerHTML = '';
+            
+            if (filteredProducts.length > 0) {
+                filteredProducts.forEach(product => {
+                    const item = document.createElement('a');
+                    item.href = '#';
+                    item.className = 'list-group-item list-group-item-action';
+                    item.innerHTML = `<strong>${product.code}</strong> - ${product.name} <span class="badge bg-secondary me-2">${product.store}</span> <span class="float-end">${product.price.toLocaleString()}원</span>`;
+                    
+                    item.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        addItemWithProduct(product);
+                        resultsDiv.classList.add('d-none');
+                        searchInput.value = '';
+                    });
+                    
+                    resultsDiv.appendChild(item);
+                });
+                
+                resultsDiv.classList.remove('d-none');
+            } else {
+                const noResult = document.createElement('div');
+                noResult.className = 'list-group-item';
+                noResult.textContent = '검색 결과가 없습니다.';
+                resultsDiv.appendChild(noResult);
+                resultsDiv.classList.remove('d-none');
+            }
+        }
+
+        // 검색 결과로 상품 추가
+        function addItemWithProduct(product) {
+            // 기존 빈 행이 있는지 확인
+            let emptyRow = null;
+            document.querySelectorAll('.item-row').forEach(row => {
+                const select = row.querySelector('select');
+                if (select && !select.value) {
+                    emptyRow = row;
+                    return;
+                }
+            });
+            
+            if (!emptyRow) {
+                // 빈 행이 없으면 새 행 추가
+                addItemRow();
+                emptyRow = itemTable.lastElementChild;
+            }
+            
+            // 상품 정보 설정
+            const select = emptyRow.querySelector('select');
+            select.value = product.id;
+            
+            const priceInput = emptyRow.querySelector('[name$="-price"]');
+            priceInput.value = product.price;
+            
+            // 소계 업데이트
+            updateRowSubtotal(emptyRow);
+            updateTotals();
+        }
+
+        // 폼 제출 전 유효성 검사
+        document.getElementById('saleForm').addEventListener('submit', function(e) {
+            // 상품이 한 개 이상 있는지 확인
+            let hasItems = false;
+            document.querySelectorAll('.item-row').forEach(row => {
+                if (row.style.display !== 'none' && row.querySelector('select').value) {
+                    hasItems = true;
+                }
+            });
+            
+            if (!hasItems) {
+                e.preventDefault();
+                alert('최소 한 개 이상의 상품을 추가해야 합니다.');
+                return false;
+            }
+            
+            // 결제 정보가 있는지 확인
+            let hasPayments = false;
+            document.querySelectorAll('.payment-row').forEach(row => {
+                if (row.style.display !== 'none') {
+                    const amount = parseFloat(row.querySelector('[name$="-amount"]').value) || 0;
+                    if (amount > 0) {
+                        hasPayments = true;
+                    }
+                }
+            });
+            
+            if (!hasPayments) {
+                e.preventDefault();
+                alert('결제 정보를 추가해야 합니다.');
+                return false;
+            }
+        });
+    });
+</script>
+{% endblock %}

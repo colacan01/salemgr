@@ -1,0 +1,121 @@
+<!-- filepath: /Users/colacan/Source/dev/python/salemgr/inventory/templates/inventory/stock_receipt_list.html -->
+{% extends 'base.html' %}
+
+{% block title %}입고 관리 - 화장품 매장 관리 시스템{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3">입고 관리</h1>
+    <div>
+        <a href="{% url 'inventory:stock_receipt_create' %}" class="btn btn-primary">
+            <i class="bi bi-plus"></i> 새 입고 등록
+        </a>
+    </div>
+</div>
+
+<!-- 검색 및 필터 -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label for="search" class="form-label">검색어</label>
+                <input type="text" name="search" id="search" value="{{ search_query }}" 
+                       class="form-control" placeholder="상품명, 코드, 입고번호">
+            </div>
+            
+            <div class="col-md-2">
+                <label for="start_date" class="form-label">시작일</label>
+                <input type="date" name="start_date" id="start_date" value="{{ start_date }}" class="form-control">
+            </div>
+            
+            <div class="col-md-2">
+                <label for="end_date" class="form-label">종료일</label>
+                <input type="date" name="end_date" id="end_date" value="{{ end_date }}" class="form-control">
+            </div>
+            
+            <div class="col-md-3">
+                <label for="store" class="form-label">매장</label>
+                <select name="store" id="store" class="form-select">
+                    <option value="">전체 매장</option>
+                    {% for store in stores %}
+                        <option value="{{ store.id }}" {% if selected_store == store.id|stringformat:'i' %}selected{% endif %}>
+                            {{ store.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="col-md-2 d-flex align-items-end">
+                <div class="d-grid w-100">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-search"></i> 검색
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 입고 내역 테이블 -->
+{% if receipts %}
+    <div class="card">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover table-striped mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>입고일</th>
+                            <th>상품 코드</th>
+                            <th>상품명</th>
+                            <th>수량</th>
+                            <th>매입 가격</th>
+                            <th>매장</th>
+                            <th>입고번호</th>
+                            <th>관리</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for receipt in receipts %}
+                        <tr>
+                            <td>{{ receipt.receipt_date|date:"Y-m-d" }}</td>
+                            <td>{{ receipt.product.code }}</td>
+                            <td>
+                                <a href="{% url 'inventory:product_detail' receipt.product.id %}">
+                                    {{ receipt.product.name }}
+                                </a>
+                            </td>
+                            <td>{{ receipt.quantity }}개</td>
+                            <td>{{ receipt.cost_price|floatformat:0 }}원</td>
+                            <td>{{ receipt.store.name }}</td>
+                            <td>{{ receipt.receipt_number|default:"-" }}</td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{% url 'inventory:stock_receipt_detail' receipt.id %}" class="btn btn-outline-info">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <a href="{% url 'inventory:stock_receipt_update' receipt.id %}" class="btn btn-outline-secondary">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    {% if user.user_type == 'app_admin' or user.user_type == 'store_manager' %}
+                                    <a href="{% url 'inventory:stock_receipt_delete' receipt.id %}" class="btn btn-outline-danger">
+                                        <i class="bi bi-trash"></i>
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- 페이지네이션 -->
+    {% include 'components/pagination.html' with page_obj=page_obj %}
+{% else %}
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle me-2"></i> 조건에 맞는 입고 내역이 없습니다.
+    </div>
+{% endif %}
+{% endblock %}

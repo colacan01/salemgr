@@ -1,0 +1,83 @@
+<!-- filepath: /Users/colacan/Source/dev/python/salemgr/returns/templates/returns/partials/return_approval_forms.html -->
+{% if return_obj.status == 'pending' %}
+<div class="card mb-4">
+    <div class="card-header bg-light">
+        <h5 class="mb-0">반품 처리</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <!-- 승인 폼 -->
+            <div class="col-md-6">
+                <div class="card h-100 border-success">
+                    <div class="card-header bg-success text-white">
+                        <h6 class="mb-0">반품 승인</h6>
+                    </div>
+                    <div class="card-body">
+                        <form method="post" action="{% url 'returns:return_approve' return_obj.id %}">
+                            {% csrf_token %}
+                            <div class="mb-3">
+                                <label for="approve_notes" class="form-label">승인 메모 (선택사항)</label>
+                                <textarea id="approve_notes" name="notes" class="form-control" rows="3"></textarea>
+                                <small class="form-text text-muted">승인 관련 특이사항을 기록합니다.</small>
+                            </div>
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-success" 
+                                        onclick="return confirm('반품을 승인하시겠습니까? 승인 시 재고가 조정됩니다.')">
+                                    <i class="bi bi-check-circle me-1"></i> 반품 승인
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 거부 폼 -->
+            <div class="col-md-6">
+                <div class="card h-100 border-danger">
+                    <div class="card-header bg-danger text-white">
+                        <h6 class="mb-0">반품 거부</h6>
+                    </div>
+                    <div class="card-body">
+                        <form method="post" action="{% url 'returns:return_reject' return_obj.id %}">
+                            {% csrf_token %}
+                            <div class="mb-3">
+                                <label for="reject_reason" class="form-label">거부 사유 *</label>
+                                <textarea id="reject_reason" name="reason" class="form-control" rows="3" required></textarea>
+                                <small class="form-text text-muted">반품 거부 사유를 자세히 기록하세요.</small>
+                            </div>
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-danger" 
+                                        onclick="return confirm('반품을 거부하시겠습니까?')">
+                                    <i class="bi bi-x-circle me-1"></i> 반품 거부
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% elif return_obj.status == 'approved' %}
+<!-- 완료 처리 버튼 -->
+<div class="card mb-4">
+    <div class="card-header bg-light">
+        <h5 class="mb-0">반품 완료 처리</h5>
+    </div>
+    <div class="card-body">
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle me-2"></i>
+            반품이 승인되었습니다. 환불 처리가 완료되면 아래 버튼을 클릭하여 반품을 완료 처리해주세요.
+        </div>
+        <form method="post" action="{% url 'returns:return_complete' return_obj.id %}">
+            {% csrf_token %}
+            <div class="d-grid">
+                <button type="submit" class="btn btn-primary" 
+                        onclick="return confirm('반품을 완료 처리하시겠습니까?')">
+                    <i class="bi bi-check-square me-1"></i> 반품 완료 처리
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}

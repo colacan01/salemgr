@@ -1,0 +1,192 @@
+<!-- filepath: /Users/colacan/Source/dev/python/salemgr/inventory/templates/inventory/stock_receipt_form.html -->
+{% extends 'base.html' %}
+
+{% block title %}
+    {% if form.instance.id %}입고 수정{% else %}새 입고 등록{% endif %} - 화장품 매장 관리 시스템
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0">{% if form.instance.id %}입고 정보 수정{% else %}새 입고 등록{% endif %}</h1>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'inventory:stock_receipt_list' %}">입고 목록</a></li>
+                    {% if form.instance.id %}
+                        <li class="breadcrumb-item"><a href="{% url 'inventory:stock_receipt_detail' form.instance.id %}">{{ form.instance.product.name }}</a></li>
+                        <li class="breadcrumb-item active">수정</li>
+                    {% else %}
+                        <li class="breadcrumb-item active">새 입고</li>
+                    {% endif %}
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">{% if form.instance.id %}입고 정보 수정{% else %}입고 정보 입력{% endif %}</h5>
+        </div>
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+                
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="{{ form.product.id_for_label }}" class="form-label">상품*</label>
+                        <select name="{{ form.product.html_name }}" 
+                                id="{{ form.product.id_for_label }}" 
+                                class="form-select {% if form.product.errors %}is-invalid{% endif %}"
+                                required>
+                            <option value="">-- 상품 선택 --</option>
+                            {% for choice in form.product.field.queryset %}
+                                <option value="{{ choice.id }}" {% if form.product.value|stringformat:"i" == choice.id|stringformat:"i" %}selected{% endif %}>
+                                    {{ choice.code }} - {{ choice.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                        {% if form.product.errors %}
+                            <div class="invalid-feedback">
+                                {{ form.product.errors|join:", " }}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label for="{{ form.store.id_for_label }}" class="form-label">입고 매장*</label>
+                        <select name="{{ form.store.html_name }}" 
+                                id="{{ form.store.id_for_label }}" 
+                                class="form-select {% if form.store.errors %}is-invalid{% endif %}"
+                                required>
+                            <option value="">-- 매장 선택 --</option>
+                            {% for choice in form.store.field.queryset %}
+                                <option value="{{ choice.id }}" {% if form.store.value|stringformat:"i" == choice.id|stringformat:"i" %}selected{% endif %}>
+                                    {{ choice.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                        {% if form.store.errors %}
+                            <div class="invalid-feedback">
+                                {{ form.store.errors|join:", " }}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="{{ form.quantity.id_for_label }}" class="form-label">입고 수량*</label>
+                        <input type="number" name="{{ form.quantity.html_name }}" 
+                               id="{{ form.quantity.id_for_label }}" 
+                               value="{{ form.quantity.value|default:'1' }}"
+                               class="form-control {% if form.quantity.errors %}is-invalid{% endif %}" 
+                               required min="1">
+                        {% if form.quantity.errors %}
+                            <div class="invalid-feedback">
+                                {{ form.quantity.errors|join:", " }}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label for="{{ form.cost_price.id_for_label }}" class="form-label">매입 가격*</label>
+                        <div class="input-group">
+                            <input type="number" name="{{ form.cost_price.html_name }}" 
+                                   id="{{ form.cost_price.id_for_label }}" 
+                                   value="{{ form.cost_price.value|default:'' }}"
+                                   class="form-control {% if form.cost_price.errors %}is-invalid{% endif %}" 
+                                   required step="100">
+                            <span class="input-group-text">원</span>
+                        </div>
+                        {% if form.cost_price.errors %}
+                            <div class="invalid-feedback">
+                                {{ form.cost_price.errors|join:", " }}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="{{ form.receipt_date.id_for_label }}" class="form-label">입고일*</label>
+                        <input type="date" name="{{ form.receipt_date.html_name }}" 
+                               id="{{ form.receipt_date.id_for_label }}" 
+                               value="{{ form.receipt_date.value|date:'Y-m-d'|default:'' }}"
+                               class="form-control {% if form.receipt_date.errors %}is-invalid{% endif %}" 
+                               required>
+                        {% if form.receipt_date.errors %}
+                            <div class="invalid-feedback">
+                                {{ form.receipt_date.errors|join:", " }}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label for="{{ form.receipt_number.id_for_label }}" class="form-label">입고번호</label>
+                        <input type="text" name="{{ form.receipt_number.html_name }}" 
+                               id="{{ form.receipt_number.id_for_label }}" 
+                               value="{{ form.receipt_number.value|default:'' }}"
+                               class="form-control {% if form.receipt_number.errors %}is-invalid{% endif %}">
+                        {% if form.receipt_number.errors %}
+                            <div class="invalid-feedback">
+                                {{ form.receipt_number.errors|join:", " }}
+                            </div>
+                        {% endif %}
+                        <small class="text-muted">선택 사항입니다. 인보이스나 송장 번호를 입력하세요.</small>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="{{ form.note.id_for_label }}" class="form-label">비고</label>
+                    <textarea name="{{ form.note.html_name }}" 
+                              id="{{ form.note.id_for_label }}" 
+                              class="form-control {% if form.note.errors %}is-invalid{% endif %}" 
+                              rows="3">{{ form.note.value|default:'' }}</textarea>
+                    {% if form.note.errors %}
+                        <div class="invalid-feedback">
+                            {{ form.note.errors|join:", " }}
+                        </div>
+                    {% endif %}
+                    <small class="text-muted">선택 사항입니다. 추가 정보를 입력하세요.</small>
+                </div>
+                
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        {% for error in form.non_field_errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                {% endif %}
+                
+                <div class="d-flex justify-content-between mt-4">
+                    <a href="{% if form.instance.id %}{% url 'inventory:stock_receipt_detail' form.instance.id %}{% else %}{% url 'inventory:stock_receipt_list' %}{% endif %}" class="btn btn-secondary">
+                        취소
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        {% if form.instance.id %}변경사항 저장{% else %}입고 등록{% endif %}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // 오늘 날짜를 가져옴
+        const today = new Date().toISOString().split('T')[0];
+        
+        // 입고일 기본값 설정 (아직 설정되지 않았을 경우)
+        const receiptDateInput = document.getElementById('{{ form.receipt_date.id_for_label }}');
+        if (!receiptDateInput.value) {
+            receiptDateInput.value = today;
+        }
+        
+        // 제품 선택 필드에 검색 기능 추가 (선택사항)
+        // 이 기능을 구현하려면 추가 JS 라이브러리가 필요할 수 있습니다 (예: Select2, Chosen 등)
+    });
+</script>
+{% endblock %}

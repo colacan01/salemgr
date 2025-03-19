@@ -1,0 +1,274 @@
+<!-- filepath: /Users/colacan/Source/dev/python/salemgr/sales/templates/sales/sale_detail.html -->
+{% extends 'base.html' %}
+
+{% block title %}판매 상세 정보 - {{ sale.sale_number }} - 화장품 매장 관리 시스템{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-0">판매 상세 정보</h1>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'sales:sale_list' %}">판매 목록</a></li>
+                <li class="breadcrumb-item active">판매 상세</li>
+            </ol>
+        </nav>
+    </div>
+    <div>
+        <div class="btn-group">
+            {% if sale.status == 'completed' %}
+                <a href="{% url 'sales:sale_update' sale.id %}" class="btn btn-outline-primary">
+                    <i class="bi bi-pencil"></i> 수정
+                </a>
+                {% if sale.can_be_cancelled %}
+                    <a href="{% url 'sales:sale_cancel' sale.id %}" class="btn btn-outline-warning">
+                        <i class="bi bi-x-circle"></i> 취소
+                    </a>
+                {% endif %}
+            {% endif %}
+            {% if user.user_type == 'app_admin' or user.user_type == 'store_manager' %}
+                <a href="{% url 'sales:sale_delete' sale.id %}" class="btn btn-outline-danger">
+                    <i class="bi bi-trash"></i> 삭제
+                </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% if sale.status == 'cancelled' %}
+    <div class="alert alert-danger mb-4">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i> 이 판매는 취소되었습니다.
+    </div>
+{% elif sale.status == 'refunded' %}
+    <div class="alert alert-warning mb-4">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i> 이 판매는 환불되었습니다.
+    </div>
+{% elif sale.status == 'pending' %}
+    <div class="alert alert-info mb-4">
+        <i class="bi bi-info-circle-fill me-2"></i> 이 판매는 아직 진행 중입니다.
+    </div>
+{% endif %}
+
+<div class="row">
+    <!-- 판매 기본 정보 -->
+    <div class="col-md-4 mb-4">
+        <div class="card h-100">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">판매 정보</h5>
+            </div>
+            <div class="card-body">
+                <table class="table">
+                    <tr>
+                        <th>판매번호</th>
+                        <td>{{ sale.sale_number }}</td>
+                    </tr>
+                    <tr>
+                        <th>판매일시</th>
+                        <td>{{ sale.sale_date|date:"Y년 m월 d일 H:i" }}</td>
+                    </tr>
+                    <tr>
+                        <th>매장</th>
+                        <td>{{ sale.store.name }}</td>
+                    </tr>
+                    <tr>
+                        <th>고객명</th>
+                        <td>{{ sale.customer_name|default:"-" }}</td>
+                    </tr>
+                    <tr>
+                        <th>연락처</th>
+                        <td>{{ sale.customer_phone|default:"-" }}</td>
+                    </tr>
+                    <tr>
+                        <th>결제방식</th>
+                        <td>{{ sale.get_payment_method_display }}</td>
+                    </tr>
+                    <tr>
+                        <th>상태</th>
+                        <td>
+                            {% if sale.status == 'completed' %}
+                                <span class="badge bg-success">완료됨</span>
+                            {% elif sale.status == 'cancelled' %}
+                                <span class="badge bg-danger">취소됨</span>
+                            {% elif sale.status == 'refunded' %}
+                                <span class="badge bg-warning">환불됨</span>
+                            {% else %}
+                                <span class="badge bg-secondary">진행중</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>등록자</th>
+                        <td>{{ sale.created_by.username }}</td>
+                    </tr>
+                    <tr>
+                        <th>등록일시</th>
+                        <td>{{ sale.created_at|date:"Y-m-d H:i" }}</td>
+                    </tr>
+                    {% if sale.notes %}
+                    <tr>
+                        <th>비고</th>
+                        <td>{{ sale.notes|linebreaks }}</td>
+                    </tr>
+                    {% endif %}
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 판매 금액 정보 및 결제 내역 -->
+    <div class="col-md-8 mb-4">
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">금액 정보</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="card bg-light h-100">
+                            <div class="card-body text-center">
+                                <h6 class="text-muted">총 상품 금액</h6>
+                                <h4>{{ sale.total_amount|floatformat:0 }}원</h4>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card bg-light h-100">
+                            <div class="card-body text-center">
+                                <h6 class="text-muted">할인 금액</h6>
+                                <h4 class="text-danger">- {{ sale.discount_amount|floatformat:0 }}원</h4>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card bg-primary text-white h-100">
+                            <div class="card-body text-center">
+                                <h6>최종 결제 금액</h6>
+                                <h4>{{ sale.final_amount|floatformat:0 }}원</h4>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 결제 내역 -->
+        {% if payments %}
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">결제 내역</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>결제 방식</th>
+                                <th>금액</th>
+                                <th>결제 상세</th>
+                                <th>결제 일시</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for payment in payments %}
+                            <tr>
+                                <td>{{ payment.get_payment_type_display }}</td>
+                                <td>{{ payment.amount|floatformat:0 }}원</td>
+                                <td>{{ payment.payment_details|default:"-" }}</td>
+                                <td>{{ payment.payment_date|date:"Y-m-d H:i" }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- 판매 상품 목록 -->
+<div class="card">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0">판매 상품 목록</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>상품코드</th>
+                        <th>상품명</th>
+                        <th>단가</th>
+                        <th>수량</th>
+                        <th>할인</th>
+                        <th>소계</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in items %}
+                    <tr>
+                        <td>{{ item.product.code }}</td>
+                        <td>
+                            <a href="{% url 'inventory:product_detail' item.product.id %}" class="text-decoration-none">
+                                {{ item.product.name }}
+                            </a>
+                        </td>
+                        <td>{{ item.price|floatformat:0 }}원</td>
+                        <td>{{ item.quantity }}개</td>
+                        <td>{{ item.discount|floatformat:0 }}원</td>
+                        <td>{{ item.subtotal|floatformat:0 }}원</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot class="table-light">
+                    <tr>
+                        <th colspan="3" class="text-end">합계:</th>
+                        <th>{{ sale.get_total_quantity }}개</th>
+                        <th></th>
+                        <th>{{ sale.total_amount|floatformat:0 }}원</th>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- 판매 관리 작업 -->
+<div class="card mb-4">
+    <div class="card-header bg-light">
+        <h5 class="mb-0">판매 관리 작업</h5>
+    </div>
+    <div class="card-body">
+        <div class="row g-2">
+            {% if sale.status == 'completed' %}
+                <div class="col-md-3">
+                    <a href="{% url 'returns:create_from_sale' sale.id %}" class="btn btn-outline-warning d-block">
+                        <i class="bi bi-arrow-return-left me-1"></i> 반품 처리
+                    </a>
+                </div>
+                <div class="col-md-3">
+                    <a href="{% url 'sales:sale_cancel' sale.id %}" class="btn btn-outline-danger d-block">
+                        <i class="bi bi-x-circle me-1"></i> 판매 취소
+                    </a>
+                </div>
+            {% endif %}
+            
+            {% if perms.sales.change_sale %}
+                <div class="col-md-3">
+                    <a href="{% url 'sales:sale_update' sale.id %}" class="btn btn-outline-primary d-block">
+                        <i class="bi bi-pencil me-1"></i> 정보 수정
+                    </a>
+                </div>
+            {% endif %}
+            
+            {% if perms.sales.delete_sale and sale.can_be_cancelled %}
+                <div class="col-md-3">
+                    <a href="{% url 'sales:sale_delete' sale.id %}" class="btn btn-outline-secondary d-block">
+                        <i class="bi bi-trash me-1"></i> 삭제
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

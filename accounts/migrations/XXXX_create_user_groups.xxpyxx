@@ -1,0 +1,60 @@
+# 마이그레이션 파일을 생성하기 위한 명령어:
+# python manage.py makemigrations accounts --empty --name=create_user_groups
+
+# filepath: accounts/migrations/XXXX_create_user_groups.py
+from django.db import migrations
+from django.contrib.auth.models import Group, Permission
+from django.contrib.contenttypes.models import ContentType
+
+def create_groups(apps, schema_editor):
+    # 앱관리자 그룹
+    app_admin_group, created = Group.objects.get_or_create(name='앱관리자')
+    
+    # 매장관리자 그룹
+    store_manager_group, created = Group.objects.get_or_create(name='매장관리자')
+    
+    # 매장직원 그룹
+    store_staff_group, created = Group.objects.get_or_create(name='매장직원')
+    
+    # 고객 그룹
+    customer_group, created = Group.objects.get_or_create(name='고객')
+    
+    # 모델 및 ContentType 가져오기
+    User = apps.get_model('accounts', 'User')
+    Store = apps.get_model('accounts', 'Store')
+    
+    # 관련 앱들의 모델도 가져오기
+    inventory_models = apps.get_models('inventory')
+    sales_models = apps.get_models('sales')
+    returns_models = apps.get_models('returns')
+    
+    # 앱관리자는 모든 권한을 가짐 (장고의 is_superuser 권한으로 처리)
+    
+    # 매장관리자 권한 부여
+    for model in [Store] + inventory_models + sales_models + returns_models:
+        content_type = ContentType.objects.get_for_model(model)
+        permissions = Permission.objects.filter(content_type=content_type)
+        for perm in permissions:
+            store_manager_group.permissions.add(perm)
+    
+    # 매장직원 권한 부여 (매장 정보 변경 권한은 제외)
+    for model in inventory_models + sales_models + returns_models:
+        content_type = ContentType.objects.get_for_model(model)
+        permissions = Permission.objects.filter(content_type=content_type)
+        for perm in permissions:
+            store_staff_group.permissions.add(perm)
+    
+    # 고객 권한은 별도의 뷰 로직으로 제어
+
+def reverse_func(apps, schema_editor):
+    Group.objects.filter(name__in=['앱관리자', '매장관리자', '매장직원', '고객']).delete()
+
+class Migration(migrations.Migration):
+    
+    dependencies = [
+        ('accounts', '0001_initial'),
+    ]
+    
+    operations = [
+        migrations.RunPython(create_groups, reverse_func),
+    ]

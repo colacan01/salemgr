@@ -1,0 +1,186 @@
+<!-- filepath: /Users/colacan/Source/dev/python/salemgr/inventory/templates/inventory/product_form.html -->
+{% extends 'base.html' %}
+
+{% block title %}
+    {% if product.id %}상품 수정 - {{ product.name }}{% else %}새 상품 등록{% endif %} - 화장품 매장 관리 시스템
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0">{% if product.id %}상품 수정{% else %}새 상품 등록{% endif %}</h1>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'inventory:product_list' %}">상품 목록</a></li>
+                    {% if product.id %}
+                        <li class="breadcrumb-item"><a href="{% url 'inventory:product_detail' product.id %}">{{ product.name }}</a></li>
+                        <li class="breadcrumb-item active">수정</li>
+                    {% else %}
+                        <li class="breadcrumb-item active">새 상품</li>
+                    {% endif %}
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">{% if product.id %}상품 정보 수정{% else %}상품 정보 입력{% endif %}</h5>
+        </div>
+        <div class="card-body">
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="{{ form.code.id_for_label }}" class="form-label">상품 코드*</label>
+                        <input type="text" name="{{ form.code.html_name }}" 
+                               id="{{ form.code.id_for_label }}" 
+                               value="{{ form.code.value|default:'' }}"
+                               class="form-control {% if form.code.errors %}is-invalid{% endif %}" 
+                               required>
+                        {% if form.code.errors %}
+                            <div class="invalid-feedback">
+                                {{ form.code.errors|join:", " }}
+                            </div>
+                        {% endif %}
+                        <small class="form-text text-muted">상품을 식별하는 고유 코드를 입력하세요.</small>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label for="{{ form.name.id_for_label }}" class="form-label">상품명*</label>
+                        <input type="text" name="{{ form.name.html_name }}" 
+                               id="{{ form.name.id_for_label }}" 
+                               value="{{ form.name.value|default:'' }}"
+                               class="form-control {% if form.name.errors %}is-invalid{% endif %}" 
+                               required>
+                        {% if form.name.errors %}
+                            <div class="invalid-feedback">
+                                {{ form.name.errors|join:", " }}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="{{ form.description.id_for_label }}" class="form-label">상품 설명</label>
+                    <textarea name="{{ form.description.html_name }}" 
+                              id="{{ form.description.id_for_label }}" 
+                              class="form-control {% if form.description.errors %}is-invalid{% endif %}" 
+                              rows="3">{{ form.description.value|default:'' }}</textarea>
+                    {% if form.description.errors %}
+                        <div class="invalid-feedback">
+                            {{ form.description.errors|join:", " }}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="{{ form.category.id_for_label }}" class="form-label">카테고리</label>
+                        <select name="{{ form.category.html_name }}" 
+                                id="{{ form.category.id_for_label }}" 
+                                class="form-select {% if form.category.errors %}is-invalid{% endif %}">
+                            <option value="">-- 카테고리 선택 --</option>
+                            {% for choice in form.category.field.queryset %}
+                                <option value="{{ choice.id }}" {% if form.category.value|stringformat:"i" == choice.id|stringformat:"i" %}selected{% endif %}>
+                                    {{ choice.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                        {% if form.category.errors %}
+                            <div class="invalid-feedback">
+                                {{ form.category.errors|join:", " }}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label for="{{ form.barcode.id_for_label }}" class="form-label">바코드</label>
+                        <input type="text" name="{{ form.barcode.html_name }}" 
+                               id="{{ form.barcode.id_for_label }}" 
+                               value="{{ form.barcode.value|default:'' }}"
+                               class="form-control {% if form.barcode.errors %}is-invalid{% endif %}">
+                        {% if form.barcode.errors %}
+                            <div class="invalid-feedback">
+                                {{ form.barcode.errors|join:", " }}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- 폼 내 매장 필드 (앱 관리자만 표시) -->
+                {% if user.user_type == 'app_admin' and form.store.field.widget.input_type != 'hidden' %}
+                <div class="mb-3">
+                    <label for="{{ form.store.id_for_label }}" class="form-label">매장</label>
+                    {{ form.store }}
+                    <div class="form-text">매장을 지정하지 않으면 모든 매장에서 사용 가능한 상품이 됩니다.</div>
+                    {% if form.store.errors %}
+                    <div class="invalid-feedback d-block">{{ form.store.errors }}</div>
+                    {% endif %}
+                </div>
+                {% else %}
+                    {{ form.store }}
+                {% endif %}
+                
+                <div class="mb-3">
+                    <label for="{{ form.image.id_for_label }}" class="form-label">상품 이미지</label>
+                    <input type="file" name="{{ form.image.html_name }}" 
+                           id="{{ form.image.id_for_label }}" 
+                           class="form-control {% if form.image.errors %}is-invalid{% endif %}">
+                    {% if form.image.errors %}
+                        <div class="invalid-feedback">
+                            {{ form.image.errors|join:", " }}
+                        </div>
+                    {% endif %}
+                    
+                    {% if product.image %}
+                        <div class="mt-2 d-flex align-items-center">
+                            <div class="me-3">
+                                <img src="{{ product.image.url }}" alt="{{ product.name }}" class="img-thumbnail" style="max-height: 100px;">
+                            </div>
+                            <div class="form-check">
+                                <input type="checkbox" name="image-clear" id="image-clear" class="form-check-input">
+                                <label for="image-clear" class="form-check-label">현재 이미지 삭제</label>
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="mb-4">
+                    <div class="form-check">
+                        <input type="checkbox" name="{{ form.is_active.html_name }}" 
+                               id="{{ form.is_active.id_for_label }}" 
+                               class="form-check-input {% if form.is_active.errors %}is-invalid{% endif %}"
+                               {% if form.is_active.value %}checked{% endif %}>
+                        <label for="{{ form.is_active.id_for_label }}" class="form-check-label">활성 상태 (판매 가능)</label>
+                        {% if form.is_active.errors %}
+                            <div class="invalid-feedback">
+                                {{ form.is_active.errors|join:", " }}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        {% for error in form.non_field_errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                {% endif %}
+                
+                <div class="d-flex justify-content-between mt-4">
+                    <a href="{% if product.id %}{% url 'inventory:product_detail' product.id %}{% else %}{% url 'inventory:product_list' %}{% endif %}" class="btn btn-secondary">
+                        취소
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        {% if product.id %}변경사항 저장{% else %}상품 등록{% endif %}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,240 @@
+<!-- filepath: /Users/colacan/Source/dev/python/salemgr/returns/templates/returns/return_list.html -->
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}반품 목록 - 화장품 매장 관리 시스템{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0">반품 목록</h1>
+        <div>
+            <a href="{% url 'returns:return_create' %}" class="btn btn-primary">
+                <i class="bi bi-plus-lg me-1"></i>새 반품 등록
+            </a>
+        </div>
+    </div>
+
+    <!-- 통계 카드 -->
+    <div class="row g-3 mb-4">
+        <div class="col-md">
+            <div class="card text-bg-light">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="card-subtitle text-muted">전체</div>
+                            <div class="h3 mt-2 mb-0">{{ stats.total }}</div>
+                        </div>
+                        <div class="rounded-circle bg-secondary bg-opacity-10 p-3">
+                            <i class="bi bi-box-seam fs-4"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md">
+            <div class="card text-bg-warning bg-opacity-10">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="card-subtitle text-muted">대기중</div>
+                            <div class="h3 mt-2 mb-0">{{ stats.pending }}</div>
+                        </div>
+                        <div class="rounded-circle bg-warning bg-opacity-10 p-3">
+                            <i class="bi bi-hourglass-split fs-4 text-warning"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md">
+            <div class="card text-bg-info bg-opacity-10">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="card-subtitle text-muted">승인됨</div>
+                            <div class="h3 mt-2 mb-0">{{ stats.approved }}</div>
+                        </div>
+                        <div class="rounded-circle bg-info bg-opacity-10 p-3">
+                            <i class="bi bi-check-circle fs-4 text-info"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md">
+            <div class="card text-bg-danger bg-opacity-10">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="card-subtitle text-muted">거부됨</div>
+                            <div class="h3 mt-2 mb-0">{{ stats.rejected }}</div>
+                        </div>
+                        <div class="rounded-circle bg-danger bg-opacity-10 p-3">
+                            <i class="bi bi-x-circle fs-4 text-danger"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md">
+            <div class="card text-bg-success bg-opacity-10">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="card-subtitle text-muted">처리완료</div>
+                            <div class="h3 mt-2 mb-0">{{ stats.completed }}</div>
+                        </div>
+                        <div class="rounded-circle bg-success bg-opacity-10 p-3">
+                            <i class="bi bi-check2-all fs-4 text-success"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 검색 및 필터 -->
+    <div class="card mb-4">
+        <div class="card-header bg-transparent">
+            <i class="bi bi-funnel me-1"></i> 검색 및 필터
+        </div>
+        <div class="card-body">
+            <form action="{% url 'returns:return_list' %}" method="get" class="row g-3">
+                <div class="col-md-4">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                        <input type="text" name="search" value="{{ search }}" class="form-control" placeholder="반품번호, 고객명, 연락처...">
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <select name="status" class="form-select">
+                        <option value="">모든 상태</option>
+                        <option value="pending" {% if status == 'pending' %}selected{% endif %}>대기중</option>
+                        <option value="approved" {% if status == 'approved' %}selected{% endif %}>승인됨</option>
+                        <option value="rejected" {% if status == 'rejected' %}selected{% endif %}>거부됨</option>
+                        <option value="completed" {% if status == 'completed' %}selected{% endif %}>처리완료</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <input type="date" name="start_date" value="{{ start_date }}" class="form-control" placeholder="시작일">
+                </div>
+                <div class="col-md-2">
+                    <input type="date" name="end_date" value="{{ end_date }}" class="form-control" placeholder="종료일">
+                </div>
+                <div class="col-md-2 d-grid">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-search me-1"></i>검색
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 반품 목록 테이블 -->
+    <div class="card">
+        <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+            <span><i class="bi bi-box2-heart me-1"></i> 반품 목록</span>
+            <span class="badge bg-secondary">총 {{ paginator.count }}건</span>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>반품번호</th>
+                            <th>판매번호</th>
+                            <th>매장</th>
+                            <th>고객명</th>
+                            <th>반품일자</th>
+                            <th>환불방법</th>
+                            <th>환불금액</th>
+                            <th>상태</th>
+                            <th class="text-end">관리</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for return in returns %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'returns:return_detail' return.id %}">{{ return.return_number }}</a>
+                            </td>
+                            <td>
+                                {% if return.sale %}
+                                <a href="{% url 'sales:sale_detail' return.sale.id %}">{{ return.sale.sale_number }}</a>
+                                {% else %}
+                                -
+                                {% endif %}
+                            </td>
+                            <td>{{ return.store.name }}</td>
+                            <td>{{ return.customer_name }}</td>
+                            <td>{{ return.return_date|date:"Y-m-d H:i" }}</td>
+                            <td>{{ return.get_refund_method_display }}</td>
+                            <td>{{ return.total_amount|floatformat:0 }}원</td>
+                            <td>
+                                {% if return.status == 'pending' %}
+                                <span class="badge text-bg-warning">대기중</span>
+                                {% elif return.status == 'approved' %}
+                                <span class="badge text-bg-info">승인됨</span>
+                                {% elif return.status == 'rejected' %}
+                                <span class="badge text-bg-danger">거부됨</span>
+                                {% elif return.status == 'completed' %}
+                                <span class="badge text-bg-success">처리완료</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                <a href="{% url 'returns:return_detail' return.id %}" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-info-circle"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="9" class="text-center py-3">등록된 반품이 없습니다.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <!-- 페이징 -->
+        {% if is_paginated %}
+        <div class="card-footer bg-transparent">
+            <nav aria-label="Page navigation">
+                <ul class="pagination justify-content-center mb-0">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page=1{% if search %}&search={{ search }}{% endif %}{% if status %}&status={{ status }}{% endif %}{% if start_date %}&start_date={{ start_date }}{% endif %}{% if end_date %}&end_date={{ end_date }}{% endif %}">&laquo; 처음</a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if status %}&status={{ status }}{% endif %}{% if start_date %}&start_date={{ start_date }}{% endif %}{% if end_date %}&end_date={{ end_date }}{% endif %}">이전</a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for num in page_obj.paginator.page_range %}
+                    {% if page_obj.number == num %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ num }}</span>
+                    </li>
+                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}{% if search %}&search={{ search }}{% endif %}{% if status %}&status={{ status }}{% endif %}{% if start_date %}&start_date={{ start_date }}{% endif %}{% if end_date %}&end_date={{ end_date }}{% endif %}">{{ num }}</a>
+                    </li>
+                    {% endif %}
+                    {% endfor %}
+                    
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if status %}&status={{ status }}{% endif %}{% if start_date %}&start_date={{ start_date }}{% endif %}{% if end_date %}&end_date={{ end_date }}{% endif %}">다음</a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if search %}&search={{ search }}{% endif %}{% if status %}&status={{ status }}{% endif %}{% if start_date %}&start_date={{ start_date }}{% endif %}{% if end_date %}&end_date={{ end_date }}{% endif %}">마지막 &raquo;</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

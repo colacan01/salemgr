@@ -1,0 +1,339 @@
+<!-- filepath: /Users/colacan/Source/dev/python/salemgr/returns/templates/returns/return_detail.html -->
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}
+    반품 상세 정보 - {{ return.return_number }} - 화장품 매장 관리 시스템
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .status-badge {
+        font-size: 0.9rem;
+        padding: 0.4rem 0.8rem;
+    }
+    .status-pending {
+        background-color: #f0ad4e;
+        color: white;
+    }
+    .status-approved {
+        background-color: #5bc0de;
+        color: white;
+    }
+    .status-rejected {
+        background-color: #d9534f;
+        color: white;
+    }
+    .status-completed {
+        background-color: #5cb85c;
+        color: white;
+    }
+    .detail-card {
+        margin-bottom: 1.5rem;
+    }
+    .detail-header {
+        background-color: #f8f9fa;
+        padding: 1rem;
+        border-bottom: 1px solid #dee2e6;
+    }
+    .item-table th {
+        background-color: #f8f9fa;
+    }
+    .timeline-item {
+        padding-left: 2rem;
+        position: relative;
+        padding-bottom: 1rem;
+    }
+    .timeline-item::before {
+        content: "";
+        position: absolute;
+        left: 0.5rem;
+        top: 0;
+        height: 100%;
+        border-left: 2px solid #dee2e6;
+    }
+    .timeline-item:last-child::before {
+        height: 1rem;
+    }
+    .timeline-badge {
+        position: absolute;
+        left: 0;
+        width: 1rem;
+        height: 1rem;
+        border-radius: 50%;
+        background-color: #6c757d;
+    }
+    .timeline-date {
+        color: #6c757d;
+        font-size: 0.8rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- 페이지 헤더 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3">반품 상세 정보</h1>
+        <div>
+            <a href="{% url 'returns:return_list' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> 목록으로
+            </a>
+            
+            {% if can_update %}
+            <a href="{% url 'returns:return_update' return.id %}" class="btn btn-primary">
+                <i class="bi bi-pencil"></i> 수정
+            </a>
+            {% endif %}
+            
+            {% if can_delete %}
+            <a href="{% url 'returns:return_delete' return.id %}" class="btn btn-danger">
+                <i class="bi bi-trash"></i> 삭제
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="row">
+        <!-- 반품 기본 정보 -->
+        <div class="col-md-8">
+            <div class="card detail-card">
+                <div class="card-header detail-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">기본 정보</h5>
+                        <span class="badge status-badge status-{{ return.status }}">
+                            {{ return.get_status_display }}
+                        </span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="row">
+                                <div class="col-5 text-muted">반품 번호:</div>
+                                <div class="col-7">{{ return.return_number }}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="row">
+                                <div class="col-5 text-muted">반품 일자:</div>
+                                <div class="col-7">{{ return.return_date|date:"Y-m-d H:i" }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="row">
+                                <div class="col-5 text-muted">고객 이름:</div>
+                                <div class="col-7">{{ return.customer_name }}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="row">
+                                <div class="col-5 text-muted">고객 연락처:</div>
+                                <div class="col-7">{{ return.customer_phone }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="row">
+                                <div class="col-5 text-muted">매장:</div>
+                                <div class="col-7">{{ return.store.name }}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="row">
+                                <div class="col-5 text-muted">환불 방법:</div>
+                                <div class="col-7">{{ return.get_refund_method_display }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="row">
+                                <div class="col-5 text-muted">총 환불 금액:</div>
+                                <div class="col-7">{{ return.total_amount|floatformat:0 }}원</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="row">
+                                <div class="col-5 text-muted">관련 판매:</div>
+                                <div class="col-7">
+                                    {% if return.sale %}
+                                    <a href="{% url 'sales:sale_detail' return.sale.id %}">
+                                        {{ return.sale.sale_number }}
+                                    </a>
+                                    {% else %}
+                                    -
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-12">
+                            <div class="row">
+                                <div class="col-md-2 text-muted">반품 사유:</div>
+                                <div class="col-md-10">{{ return.reason|linebreaks }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    {% if return.notes %}
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="row">
+                                <div class="col-md-2 text-muted">비고:</div>
+                                <div class="col-md-10">{{ return.notes|linebreaks }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- 반품 항목 목록 -->
+            <div class="card detail-card">
+                <div class="card-header detail-header">
+                    <h5 class="mb-0">반품 항목</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover item-table">
+                            <thead>
+                                <tr>
+                                    <th>상품 코드</th>
+                                    <th>상품명</th>
+                                    <th class="text-end">수량</th>
+                                    <th class="text-end">판매가</th>
+                                    <th class="text-end">환불액</th>
+                                    <th>상품 상태</th>
+                                    <th>재입고</th>
+                                    <th>반품 사유</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in return.returnitems.all %}
+                                <tr>
+                                    <td>{{ item.product.code }}</td>
+                                    <td>{{ item.product.name }}</td>
+                                    <td class="text-end">{{ item.quantity }}</td>
+                                    <td class="text-end">{{ item.price|floatformat:0 }}원</td>
+                                    <td class="text-end">{{ item.refund_amount|floatformat:0 }}원</td>
+                                    <td>{{ item.get_condition_display }}</td>
+                                    <td>
+                                        {% if item.restock %}
+                                        <span class="text-success"><i class="bi bi-check-lg"></i></span>
+                                        {% else %}
+                                        <span class="text-danger"><i class="bi bi-x-lg"></i></span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ item.get_return_reason_display }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <td colspan="4" class="text-end fw-bold">총 합계:</td>
+                                    <td class="text-end fw-bold">{{ return.total_amount|floatformat:0 }}원</td>
+                                    <td colspan="3"></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 반품 상태 및 처리 -->
+        <div class="col-md-4">
+            <!-- 상태 처리 버튼 -->
+            <div class="card detail-card">
+                <div class="card-header detail-header">
+                    <h5 class="mb-0">상태 관리</h5>
+                </div>
+                <div class="card-body">
+                    {% if can_approve %}
+                    <form method="post" action="{% url 'returns:return_approve' return.id %}" class="mb-3">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-success w-100">
+                            <i class="bi bi-check-circle"></i> 반품 승인
+                        </button>
+                    </form>
+                    {% endif %}
+                    
+                    {% if can_reject %}
+                    <form method="post" action="{% url 'returns:return_reject' return.id %}" class="mb-3">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger w-100">
+                            <i class="bi bi-x-circle"></i> 반품 거절
+                        </button>
+                    </form>
+                    {% endif %}
+                    
+                    {% if can_complete %}
+                    <form method="post" action="{% url 'returns:return_complete' return.id %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="bi bi-flag"></i> 반품 완료 처리
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- 반품 처리 내역 -->
+            <div class="card detail-card">
+                <div class="card-header detail-header">
+                    <h5 class="mb-0">처리 내역</h5>
+                </div>
+                <div class="card-body">
+                    <div class="timeline">
+                        <div class="timeline-item">
+                            <div class="timeline-badge"></div>
+                            <div class="timeline-content">
+                                <div class="timeline-date">{{ return.created_at|date:"Y-m-d H:i" }}</div>
+                                <div>반품 등록</div>
+                                <div class="text-muted">{{ return.created_by.username }}</div>
+                            </div>
+                        </div>
+                        
+                        {% if return.approved_at %}
+                        <div class="timeline-item">
+                            <div class="timeline-badge bg-success"></div>
+                            <div class="timeline-content">
+                                <div class="timeline-date">{{ return.approved_at|date:"Y-m-d H:i" }}</div>
+                                <div>반품 승인</div>
+                                <div class="text-muted">{{ return.approved_by.username }}</div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        {% if return.rejected_at %}
+                        <div class="timeline-item">
+                            <div class="timeline-badge bg-danger"></div>
+                            <div class="timeline-content">
+                                <div class="timeline-date">{{ return.rejected_at|date:"Y-m-d H:i" }}</div>
+                                <div>반품 거절</div>
+                                <div class="text-muted">{{ return.rejected_by.username }}</div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        {% if return.completed_at %}
+                        <div class="timeline-item">
+                            <div class="timeline-badge bg-primary"></div>
+                            <div class="timeline-content">
+                                <div class="timeline-date">{{ return.completed_at|date:"Y-m-d H:i" }}</div>
+                                <div>반품 완료</div>
+                                <div class="text-muted">{{ return.completed_by.username }}</div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,196 @@
+<!-- filepath: /Users/colacan/Source/dev/python/salemgr/inventory/templates/inventory/stock_adjustment_form.html -->
+{% extends 'base.html' %}
+
+{% block title %}재고 조정 등록 - 화장품 매장 관리 시스템{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0">재고 조정 등록</h1>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'inventory:stock_adjustment_list' %}">재고 조정 목록</a></li>
+                    <li class="breadcrumb-item active">재고 조정 등록</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">재고 조정 정보 입력</h5>
+        </div>
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+                
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="{{ form.product.id_for_label }}" class="form-label">상품*</label>
+                        <select name="{{ form.product.html_name }}" 
+                               id="{{ form.product.id_for_label }}" 
+                               class="form-select {% if form.product.errors %}is-invalid{% endif %}"
+                               required>
+                            <option value="">-- 상품 선택 --</option>
+                            {% for choice in form.product.field.queryset %}
+                                <option value="{{ choice.id }}" {% if form.product.value|stringformat:"i" == choice.id|stringformat:"i" %}selected{% endif %}>
+                                    {{ choice.code }} - {{ choice.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                        {% if form.product.errors %}
+                            <div class="invalid-feedback">
+                                {{ form.product.errors|join:", " }}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label for="{{ form.store.id_for_label }}" class="form-label">매장*</label>
+                        <select name="{{ form.store.html_name }}" 
+                               id="{{ form.store.id_for_label }}" 
+                               class="form-select {% if form.store.errors %}is-invalid{% endif %}"
+                               required>
+                            <option value="">-- 매장 선택 --</option>
+                            {% for choice in form.store.field.queryset %}
+                                <option value="{{ choice.id }}" {% if form.store.value|stringformat:"i" == choice.id|stringformat:"i" %}selected{% endif %}>
+                                    {{ choice.name }} ({{ choice.get_country_display }})
+                                </option>
+                            {% endfor %}
+                        </select>
+                        {% if form.store.errors %}
+                            <div class="invalid-feedback">
+                                {{ form.store.errors|join:", " }}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <label for="{{ form.adjustment_type.id_for_label }}" class="form-label">조정 유형*</label>
+                        <select name="{{ form.adjustment_type.html_name }}" 
+                               id="{{ form.adjustment_type.id_for_label }}" 
+                               class="form-select {% if form.adjustment_type.errors %}is-invalid{% endif %}"
+                               required>
+                            {% for choice in form.adjustment_type.field.choices %}
+                                <option value="{{ choice.0 }}" {% if form.adjustment_type.value == choice.0 %}selected{% endif %}>
+                                    {{ choice.1 }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                        {% if form.adjustment_type.errors %}
+                            <div class="invalid-feedback">
+                                {{ form.adjustment_type.errors|join:", " }}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label for="{{ form.quantity.id_for_label }}" class="form-label">조정 수량*</label>
+                        <input type="number" name="{{ form.quantity.html_name }}" 
+                               id="{{ form.quantity.id_for_label }}" 
+                               value="{{ form.quantity.value|default:'1' }}"
+                               class="form-control {% if form.quantity.errors %}is-invalid{% endif %}" 
+                               required min="1">
+                        {% if form.quantity.errors %}
+                            <div class="invalid-feedback">
+                                {{ form.quantity.errors|join:", " }}
+                            </div>
+                        {% endif %}
+                        <div id="stockInfo" class="form-text mt-1"></div>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label for="{{ form.adjustment_date.id_for_label }}" class="form-label">조정 날짜*</label>
+                        <input type="date" name="{{ form.adjustment_date.html_name }}" 
+                               id="{{ form.adjustment_date.id_for_label }}" 
+                               value="{{ form.adjustment_date.value|date:'Y-m-d'|default:'' }}"
+                               class="form-control {% if form.adjustment_date.errors %}is-invalid{% endif %}" 
+                               required>
+                        {% if form.adjustment_date.errors %}
+                            <div class="invalid-feedback">
+                                {{ form.adjustment_date.errors|join:", " }}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="{{ form.reason.id_for_label }}" class="form-label">조정 사유*</label>
+                    <textarea name="{{ form.reason.html_name }}" 
+                            id="{{ form.reason.id_for_label }}" 
+                            class="form-control {% if form.reason.errors %}is-invalid{% endif %}" 
+                            rows="4" required>{{ form.reason.value|default:'' }}</textarea>
+                    {% if form.reason.errors %}
+                        <div class="invalid-feedback">
+                            {{ form.reason.errors|join:", " }}
+                        </div>
+                    {% endif %}
+                    <small class="form-text text-muted">재고 조정의 이유를 자세히 기록해주세요.</small>
+                </div>
+                
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        {% for error in form.non_field_errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                {% endif %}
+                
+                <div class="d-flex justify-content-between mt-4">
+                    <a href="{% url 'inventory:stock_adjustment_list' %}" class="btn btn-secondary">
+                        취소
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        재고 조정 등록
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // 상품과 매장 선택 시 재고 정보 가져오기
+        const productSelect = document.getElementById('{{ form.product.id_for_label }}');
+        const storeSelect = document.getElementById('{{ form.store.id_for_label }}');
+        const stockInfoElement = document.getElementById('stockInfo');
+        
+        // 재고 정보 조회 함수
+        function checkStockInfo() {
+            const productId = productSelect.value;
+            const storeId = storeSelect.value;
+            
+            if (productId && storeId) {
+                fetch(`/inventory/api/product-stock/?product_id=${productId}&store_id=${storeId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.quantity !== undefined) {
+                            stockInfoElement.innerHTML = `현재 재고: <strong>${data.quantity}</strong>개`;
+                            stockInfoElement.classList.remove('text-danger');
+                            stockInfoElement.classList.add('text-muted');
+                        } else {
+                            stockInfoElement.innerHTML = '재고 정보가 없습니다.';
+                            stockInfoElement.classList.remove('text-danger');
+                            stockInfoElement.classList.add('text-muted');
+                        }
+                    });
+            } else {
+                stockInfoElement.innerHTML = '';
+            }
+        }
+        
+        // 이벤트 리스너 추가
+        productSelect.addEventListener('change', checkStockInfo);
+        storeSelect.addEventListener('change', checkStockInfo);
+        
+        // 초기 로드 시 재고 정보 확인
+        checkStockInfo();
+    });
+</script>
+{% endblock %}

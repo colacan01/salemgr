@@ -1,0 +1,127 @@
+<!-- filepath: /Users/colacan/Source/dev/python/salemgr/inventory/templates/inventory/stock_adjustment_list.html -->
+{% extends 'base.html' %}
+
+{% block title %}재고 조정 관리 - 화장품 매장 관리 시스템{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3">재고 조정 관리</h1>
+    <div>
+        <a href="{% url 'inventory:stock_adjustment_create' %}" class="btn btn-primary">
+            <i class="bi bi-plus"></i> 재고 조정 등록
+        </a>
+    </div>
+</div>
+
+<!-- 검색 및 필터 -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-4">
+                <label for="search" class="form-label">검색</label>
+                <input type="text" name="search" id="search" class="form-control" 
+                       value="{{ search_query }}" placeholder="상품명, 상품코드, 조정사유">
+            </div>
+            <div class="col-md-2">
+                <label for="store" class="form-label">매장</label>
+                <select name="store" id="store" class="form-select">
+                    <option value="">모든 매장</option>
+                    {% for store in stores %}
+                        <option value="{{ store.id }}" {% if selected_store == store.id|stringformat:"i" %}selected{% endif %}>
+                            {{ store.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label for="adjustment_type" class="form-label">조정 유형</label>
+                <select name="adjustment_type" id="adjustment_type" class="form-select">
+                    <option value="">모든 유형</option>
+                    {% for key, value in adjustment_types.items %}
+                        <option value="{{ key }}" {% if selected_adjustment_type == key %}selected{% endif %}>
+                            {{ value }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label for="start_date" class="form-label">시작일</label>
+                <input type="date" name="start_date" id="start_date" class="form-control" value="{{ start_date }}">
+            </div>
+            <div class="col-md-2">
+                <label for="end_date" class="form-label">종료일</label>
+                <input type="date" name="end_date" id="end_date" class="form-control" value="{{ end_date }}">
+            </div>
+            <div class="col-12 text-end">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-search"></i> 검색
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 재고 조정 목록 테이블 -->
+{% if adjustments %}
+    <div class="card">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>조정일</th>
+                            <th>상품코드</th>
+                            <th>상품명</th>
+                            <th>조정유형</th>
+                            <th>수량</th>
+                            <th>매장</th>
+                            <th>등록자</th>
+                            <th>관리</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for adjustment in adjustments %}
+                        <tr>
+                            <td>{{ adjustment.adjustment_date|date:"Y-m-d" }}</td>
+                            <td>{{ adjustment.product.code }}</td>
+                            <td>
+                                <a href="{% url 'inventory:product_detail' adjustment.product.id %}" class="text-decoration-none">
+                                    {{ adjustment.product.name }}
+                                </a>
+                            </td>
+                            <td>
+                                <span class="badge {% if adjustment.adjustment_type == 'increase' %}bg-success{% else %}bg-danger{% endif %}">
+                                    {{ adjustment.get_adjustment_type_display }}
+                                </span>
+                            </td>
+                            <td>{{ adjustment.quantity }}</td>
+                            <td>{{ adjustment.store.name }}</td>
+                            <td>{{ adjustment.created_by.username|default:"-" }}</td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{% url 'inventory:stock_adjustment_detail' adjustment.id %}" class="btn btn-outline-primary">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    {% if user.user_type == 'app_admin' or user.user_type == 'store_manager' %}
+                                    <a href="{% url 'inventory:stock_adjustment_delete' adjustment.id %}" class="btn btn-outline-danger">
+                                        <i class="bi bi-trash"></i>
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- 페이지네이션 -->
+    {% include 'components/pagination.html' with page_obj=page_obj %}
+{% else %}
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle me-2"></i> 등록된 재고 조정 내역이 없습니다.
+    </div>
+{% endif %}
+{% endblock %}

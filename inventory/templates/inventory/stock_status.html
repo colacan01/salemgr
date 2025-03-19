@@ -1,0 +1,263 @@
+<!-- filepath: /Users/colacan/Source/dev/python/salemgr/inventory/templates/inventory/stock_status.html -->
+{% extends 'base.html' %}
+
+{% block title %}재고 현황 - 화장품 매장 관리 시스템{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3">재고 현황</h1>
+    <div>
+        <a href="{% url 'inventory:stock_receipt_create' %}" class="btn btn-success me-1">
+            <i class="bi bi-box-arrow-in-down"></i> 입고 등록
+        </a>
+        <a href="{% url 'inventory:stock_release_create' %}" class="btn btn-warning me-1">
+            <i class="bi bi-box-arrow-up"></i> 출고 등록
+        </a>
+        <a href="{% url 'inventory:stock_adjustment_create' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-gear"></i> 재고 조정
+        </a>
+    </div>
+</div>
+
+<!-- 검색 및 필터 -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label for="search" class="form-label">검색</label>
+                <div class="input-group">
+                    <input type="text" name="search" id="search" class="form-control"
+                           value="{{ search_query }}" placeholder="상품명, 코드, 바코드">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-search"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="col-md-3">
+                <label for="store" class="form-label">매장</label>
+                <select name="store" id="store" class="form-select">
+                    <option value="">모든 매장</option>
+                    {% for store in stores %}
+                        <option value="{{ store.id }}" {% if selected_store == store.id|stringformat:"i" %}selected{% endif %}>
+                            {{ store.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-md-3">
+                <label for="category" class="form-label">카테고리</label>
+                <select name="category" id="category" class="form-select">
+                    <option value="">모든 카테고리</option>
+                    {% for category in categories %}
+                        <option value="{{ category.id }}" {% if selected_category == category.id|stringformat:"i" %}selected{% endif %}>
+                            {{ category.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-md-3">
+                <label for="stock_filter" class="form-label">재고 필터</label>
+                <select name="stock_filter" id="stock_filter" class="form-select">
+                    <option value="">모든 재고</option>
+                    <option value="low" {% if selected_stock_filter == 'low' %}selected{% endif %}>부족 재고 (10개 미만)</option>
+                    <option value="out" {% if selected_stock_filter == 'out' %}selected{% endif %}>품절 (0개 이하)</option>
+                </select>
+            </div>
+
+            <div class="col-12">
+                <div class="d-flex justify-content-end">
+                    <a href="{% url 'inventory:stock_status' %}" class="btn btn-outline-secondary me-2">
+                        필터 초기화
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-filter me-1"></i> 필터 적용
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 재고 통계 요약 -->
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card bg-primary text-white h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-uppercase">전체 상품 수</h6>
+                        <h3 class="mb-0">{{ page_obj.paginator.count }}</h3>
+                    </div>
+                    <i class="bi bi-box fs-1"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card bg-warning h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-uppercase">부족 재고</h6>
+                        <h3 class="mb-0">{{ low_stock_count|default:"0" }}</h3>
+                    </div>
+                    <i class="bi bi-exclamation-triangle fs-1"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card bg-danger text-white h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-uppercase">품절 상품</h6>
+                        <h3 class="mb-0">{{ out_of_stock_count|default:"0" }}</h3>
+                    </div>
+                    <i class="bi bi-x-octagon fs-1"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 재고 목록 테이블 -->
+{% if stocks %}
+    <div class="card">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>상품코드</th>
+                            <th>상품명</th>
+                            <th>카테고리</th>
+                            <th>매장</th>
+                            <th>현재 재고</th>
+                            <th>판매가격</th>
+                            <th>최근 갱신일</th>
+                            <th>관리</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for stock in stocks %}
+                        <tr class="{% if stock.quantity <= 0 %}table-danger{% elif stock.quantity < 10 %}table-warning{% endif %}">
+                            <td>{{ stock.product.code }}</td>
+                            <td>
+                                <a href="{% url 'inventory:product_detail' stock.product.id %}" class="text-decoration-none">
+                                    {{ stock.product.name }}
+                                </a>
+                            </td>
+                            <td>{% if stock.product.category %}{{ stock.product.category.name }}{% else %}-{% endif %}</td>
+                            <td>{{ stock.store.name }}</td>
+                            <td>
+                                <span class="{% if stock.quantity <= 0 %}text-danger fw-bold{% elif stock.quantity < 10 %}text-warning fw-bold{% endif %}">
+                                    {{ stock.quantity }}
+                                </span>
+                            </td>
+                            <td>{% if stock.product.get_current_price %}{{ stock.product.get_current_price|floatformat:0 }}원{% else %}-{% endif %}</td>
+                            <td>{{ stock.updated_at|date:"Y-m-d H:i" }}</td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{% url 'inventory:stock_receipt_create' %}?product={{ stock.product.id }}&store={{ stock.store.id }}" class="btn btn-outline-success" title="입고">
+                                        <i class="bi bi-box-arrow-in-down"></i>
+                                    </a>
+                                    <a href="{% url 'inventory:stock_release_create' %}?product={{ stock.product.id }}&store={{ stock.store.id }}" class="btn btn-outline-warning" title="출고">
+                                        <i class="bi bi-box-arrow-up"></i>
+                                    </a>
+                                    <a href="{% url 'inventory:stock_adjustment_create' %}?product={{ stock.product.id }}&store={{ stock.store.id }}" class="btn btn-outline-secondary" title="조정">
+                                        <i class="bi bi-gear"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- 페이지네이션 -->
+    {% include 'components/pagination.html' with page_obj=page_obj %}
+{% else %}
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle me-2"></i> 
+        {% if search_query or selected_store or selected_category or selected_stock_filter %}
+            검색 조건에 맞는 재고 정보가 없습니다.
+        {% else %}
+            등록된 재고 정보가 없습니다.
+        {% endif %}
+    </div>
+{% endif %}
+
+<!-- 재고 관리 팁 -->
+<div class="card mt-4">
+    <div class="card-header bg-light">
+        <h5 class="mb-0">재고 관리 팁</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-4 mb-3">
+                <div class="d-flex">
+                    <div class="me-3 text-primary">
+                        <i class="bi bi-exclamation-triangle fs-3"></i>
+                    </div>
+                    <div>
+                        <h6>부족 재고 관리</h6>
+                        <p class="text-muted small">재고가 10개 미만인 상품은 재고 보충을 고려하세요.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="d-flex">
+                    <div class="me-3 text-warning">
+                        <i class="bi bi-graph-up fs-3"></i>
+                    </div>
+                    <div>
+                        <h6>수요 예측</h6>
+                        <p class="text-muted small">과거 판매 데이터를 분석하여 재고를 적절하게 유지하세요.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="d-flex">
+                    <div class="me-3 text-success">
+                        <i class="bi bi-calendar-check fs-3"></i>
+                    </div>
+                    <div>
+                        <h6>정기 재고 확인</h6>
+                        <p class="text-muted small">매주 재고를 점검하고 실제 수량과 시스템을 일치시키세요.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // 필터 변경 시 자동 제출
+        const autoSubmitFilters = ['store', 'category', 'stock_filter'];
+        
+        autoSubmitFilters.forEach(function(filter) {
+            document.getElementById(filter).addEventListener('change', function() {
+                this.closest('form').submit();
+            });
+        });
+        
+        // 필터 버튼에 로딩 표시 추가
+        document.querySelector('button[type="submit"]').addEventListener('click', function() {
+            this.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> 필터링 중...';
+            this.disabled = true;
+        });
+    });
+</script>
+{% endblock %}

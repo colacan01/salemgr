@@ -1,0 +1,144 @@
+{% extends 'base.html' %}
+
+{% block title %}회원가입 - 화장품 매장 관리 시스템{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">회원가입</h4>
+            </div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.username.id_for_label }}" class="form-label">아이디</label>
+                            <input type="text" name="{{ form.username.html_name }}" 
+                                   id="{{ form.username.id_for_label }}" 
+                                   class="form-control {% if form.username.errors %}is-invalid{% endif %}" 
+                                   required>
+                            {% if form.username.errors %}
+                                <div class="invalid-feedback">
+                                    {{ form.username.errors|join:", " }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.email.id_for_label }}" class="form-label">이메일</label>
+                            <input type="email" name="{{ form.email.html_name }}" 
+                                   id="{{ form.email.id_for_label }}" 
+                                   class="form-control {% if form.email.errors %}is-invalid{% endif %}" 
+                                   required>
+                            {% if form.email.errors %}
+                                <div class="invalid-feedback">
+                                    {{ form.email.errors|join:", " }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.first_name.id_for_label }}" class="form-label">이름</label>
+                            <input type="text" name="{{ form.first_name.html_name }}" 
+                                   id="{{ form.first_name.id_for_label }}" 
+                                   class="form-control {% if form.first_name.errors %}is-invalid{% endif %}">
+                            {% if form.first_name.errors %}
+                                <div class="invalid-feedback">
+                                    {{ form.first_name.errors|join:", " }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.last_name.id_for_label }}" class="form-label">성</label>
+                            <input type="text" name="{{ form.last_name.html_name }}" 
+                                   id="{{ form.last_name.id_for_label }}" 
+                                   class="form-control {% if form.last_name.errors %}is-invalid{% endif %}">
+                            {% if form.last_name.errors %}
+                                <div class="invalid-feedback">
+                                    {{ form.last_name.errors|join:", " }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.password1.id_for_label }}" class="form-label">비밀번호</label>
+                            <input type="password" name="{{ form.password1.html_name }}" 
+                                   id="{{ form.password1.id_for_label }}" 
+                                   class="form-control {% if form.password1.errors %}is-invalid{% endif %}" 
+                                   required>
+                            {% if form.password1.errors %}
+                                <div class="invalid-feedback">
+                                    {{ form.password1.errors|join:", " }}
+                                </div>
+                            {% endif %}
+                            <small class="text-muted">
+                                비밀번호는 최소 8자 이상이어야 하며, 문자와 숫자를 포함해야 합니다.
+                            </small>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.password2.id_for_label }}" class="form-label">비밀번호 확인</label>
+                            <input type="password" name="{{ form.password2.html_name }}" 
+                                   id="{{ form.password2.id_for_label }}" 
+                                   class="form-control {% if form.password2.errors %}is-invalid{% endif %}" 
+                                   required>
+                            {% if form.password2.errors %}
+                                <div class="invalid-feedback">
+                                    {{ form.password2.errors|join:", " }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.phone_number.id_for_label }}" class="form-label">전화번호</label>
+                        <input type="text" name="{{ form.phone_number.html_name }}" 
+                               id="{{ form.phone_number.id_for_label }}" 
+                               class="form-control {% if form.phone_number.errors %}is-invalid{% endif %}">
+                        {% if form.phone_number.errors %}
+                            <div class="invalid-feedback">
+                                {{ form.phone_number.errors|join:", " }}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.profile_image.id_for_label }}" class="form-label">프로필 이미지</label>
+                        <input type="file" name="{{ form.profile_image.html_name }}" 
+                               id="{{ form.profile_image.id_for_label }}" 
+                               class="form-control {% if form.profile_image.errors %}is-invalid{% endif %}">
+                        {% if form.profile_image.errors %}
+                            <div class="invalid-feedback">
+                                {{ form.profile_image.errors|join:", " }}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {% for error in form.non_field_errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">회원가입</button>
+                    </div>
+                </form>
+                <div class="mt-3 text-center">
+                    <p>이미 계정이 있으신가요? <a href="{% url 'accounts:login' %}">로그인</a></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

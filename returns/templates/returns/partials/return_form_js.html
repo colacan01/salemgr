@@ -1,0 +1,217 @@
+<!-- filepath: /Users/colacan/Source/dev/python/salemgr/returns/templates/returns/partials/return_form_js.html -->
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const saleSelect = document.getElementById('id_sale');
+        const loadItemsBtn = document.getElementById('load-sale-items');
+        const itemsContainer = document.getElementById('return-items-container');
+        const emptyRow = document.querySelector('.empty-form-row');
+        const totalFormsets = document.getElementById('id_returnitems-TOTAL_FORMS');
+        const maxFormsets = document.getElementById('id_returnitems-MAX_NUM_FORMS');
+        
+        // 판매 선택 시 고객 정보 자동 불러오기
+        saleSelect.addEventListener('change', function() {
+            const saleId = this.value;
+            if (!saleId) return;
+            
+            // 판매 정보 불러오기
+            fetch(`/returns/api/sale-info/?sale_id=${saleId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.sale) {
+                        // 고객 정보 채우기
+                        document.getElementById('id_customer_name').value = data.sale.customer_name;
+                        document.getElementById('id_customer_phone').value = data.sale.customer_phone;
+                        
+                        // 매장 정보 채우기
+                        const storeSelect = document.getElementById('id_store');
+                        if (storeSelect) {
+                            for (let i = 0; i < storeSelect.options.length; i++) {
+                                if (storeSelect.options[i].value == data.sale.store_id) {
+                                    storeSelect.selectedIndex = i;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                })
+                .catch(error => console.error('Error fetching sale info:', error));
+        });
+        
+        // 상품 항목 불러오기 버튼 클릭 이벤트
+        if (loadItemsBtn) {
+            loadItemsBtn.addEventListener('click', function() {
+                const saleId = saleSelect.value;
+                if (!saleId) {
+                    alert('먼저 판매를 선택해주세요.');
+                    return;
+                }
+                
+                // 기존 항목 비우기
+                clearItems();
+                
+                // 판매 상품 목록 불러오기
+                fetch(`/returns/api/sale-items/?sale_id=${saleId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.items && data.items.length > 0) {
+                            // 각 상품별로 반품 항목 추가
+                            data.items.forEach((item, index) => {
+                                addItemRow(item, index);
+                            });
+                        } else {
+                            alert('선택한 판매에 상품이 없거나 반품 가능한 상품이 없습니다.');
+                        }
+                    })
+                    .catch(error => console.error('Error fetching sale items:', error));
+            });
+        }
+        
+        // 항목 추가 버튼
+        document.getElementById('add-item').addEventListener('click', function() {
+            const formCount = parseInt(totalFormsets.value);
+            if (formCount < parseInt(maxFormsets.value)) {
+                addEmptyItemRow(formCount);
+                totalFormsets.value = formCount + 1;
+            } else {
+                alert('최대 항목 수에 도달했습니다.');
+            }
+        });
+        
+        // 항목 삭제 이벤트 위임
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('remove-item') || e.target.closest('.remove-item')) {
+                const row = e.target.closest('.item-row');
+                const deleteCheckbox = row.querySelector('input[type=checkbox][name$="-DELETE"]');
+                
+                if (deleteCheckbox) {
+                    // 기존 항목의 경우 DELETE 체크박스 체크
+                    deleteCheckbox.checked = true;
+                    row.style.display = 'none';
+                } else {
+                    // 새 항목의 경우 행 제거
+                    row.remove();
+                    updateFormCounts();
+                }
+            }
+        });
+        
+        // 반품 가능 수량 계산 및 입력 제한
+        document.addEventListener('change', function(e) {
+            if (e.target.name && e.target.name.endsWith('-quantity')) {
+                const row = e.target.closest('.item-row');
+                const maxQty = parseInt(row.querySelector('input[name$="-max_quantity"]').value || 0);
+                const qty = parseInt(e.target.value || 0);
+                
+                if (qty > maxQty) {
+                    alert(`최대 ${maxQty}개까지 반품 가능합니다.`);
+                    e.target.value = maxQty;
+                } else if (qty < 1) {
+                    e.target.value = 1;
+                }
+                
+                // 환불 금액 자동 계산
+                calculateRefundAmount(row);
+            }
+            
+            // 반품 가격 변경 시 환불 금액 자동 계산
+            if (e.target.name && e.target.name.endsWith('-return_price')) {
+                const row = e.target.closest('.item-row');
+                calculateRefundAmount(row);
+            }
+        });
+        
+        // 환불 금액 계산
+        function calculateRefundAmount(row) {
+            const priceInput = row.querySelector('input[name$="-return_price"]');
+            const qtyInput = row.querySelector('input[name$="-quantity"]');
+            const refundInput = row.querySelector('input[name$="-refund_amount"]');
+            
+            if (priceInput && qtyInput && refundInput) {
+                const price = parseFloat(priceInput.value) || 0;
+                const qty = parseInt(qtyInput.value) || 0;
+                refundInput.value = (price * qty).toFixed(2);
+            }
+        }
+        
+        // 기존 항목 비우기
+        function clearItems() {
+            const rows = document.querySelectorAll('.item-row:not(.empty-form-row)');
+            rows.forEach(row => {
+                const deleteCheckbox = row.querySelector('input[type=checkbox][name$="-DELETE"]');
+                if (deleteCheckbox) {
+                    deleteCheckbox.checked = true;
+                    row.style.display = 'none';
+                } else {
+                    row.remove();
+                }
+            });
+            
+            // 카운트 업데이트
+            updateFormCounts();
+        }
+        
+        // 판매 항목으로 반품 행 추가
+        function addItemRow(item, index) {
+            const formCount = parseInt(totalFormsets.value);
+            const newRow = emptyRow.cloneNode(true);
+            newRow.classList.remove('empty-form-row');
+            newRow.classList.add('item-row');
+            newRow.style.display = '';
+            
+            // 각 필드의 인덱스 업데이트
+            newRow.innerHTML = newRow.innerHTML.replaceAll('__prefix__', formCount + index);
+            
+            // 상품 정보 채우기
+            newRow.querySelector('select[name$="-product"]').value = item.product_id;
+            newRow.querySelector('input[name$="-return_price"]').value = item.price;
+            newRow.querySelector('input[name$="-quantity"]').value = 1;
+            newRow.querySelector('input[name$="-max_quantity"]').value = item.quantity;
+            newRow.querySelector('input[name$="-refund_amount"]').value = item.price;
+            
+            // 행 추가
+            itemsContainer.appendChild(newRow);
+            
+            // 총 폼셋 수 업데이트
+            totalFormsets.value = formCount + index + 1;
+        }
+        
+        // 빈 반품 행 추가
+        function addEmptyItemRow(index) {
+            const newRow = emptyRow.cloneNode(true);
+            newRow.classList.remove('empty-form-row');
+            newRow.classList.add('item-row');
+            newRow.style.display = '';
+            
+            // 인덱스 업데이트
+            newRow.innerHTML = newRow.innerHTML.replaceAll('__prefix__', index);
+            
+            // 행 추가
+            itemsContainer.appendChild(newRow);
+        }
+        
+        // 폼셋 카운트 업데이트
+        function updateFormCounts() {
+            const visibleRows = document.querySelectorAll('.item-row:not(.empty-form-row):not([style*="display: none"])');
+            totalFormsets.value = visibleRows.length;
+            
+            // 각 행의 인덱스 재설정
+            visibleRows.forEach((row, index) => {
+                const inputs = row.querySelectorAll('input, select');
+                inputs.forEach(input => {
+                    const name = input.name;
+                    if (name) {
+                        const prefix = name.split('-')[0];
+                        const suffix = name.split('-')[1];
+                        input.name = `${prefix}-${index}-${suffix}`;
+                        input.id = `id_${prefix}-${index}-${suffix}`;
+                    }
+                });
+            });
+        }
+        
+        // 페이지 로드 시 판매가 이미 선택되어 있으면 고객 정보 자동 불러오기
+        if (saleSelect.value) {
+            saleSelect.dispatchEvent(new Event('change'));
+        }
+    });
+</script>

@@ -1,0 +1,119 @@
+<!-- filepath: /Users/colacan/Source/dev/python/salemgr/accounts/templates/accounts/store_detail.html -->
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ store.name }} - 매장 상세 정보{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0">매장 상세 정보</h1>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="/">홈</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'accounts:store_list' %}">매장 관리</a></li>
+                    <li class="breadcrumb-item active">{{ store.name }}</li>
+                </ol>
+            </nav>
+        </div>
+        
+        <!-- 액션 버튼 부분 -->
+        <div>
+            {% if can_edit %}
+                <a href="{% url 'accounts:store_update' store.id %}" class="btn btn-primary">
+                    <i class="bi bi-pencil me-1"></i> 정보 수정
+                </a>
+            {% endif %}
+            
+            {% if can_delete %}
+                <a href="{% url 'accounts:store_delete' store.id %}" class="btn btn-danger">
+                    <i class="bi bi-trash me-1"></i> 매장 삭제
+                </a>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="row">
+        <!-- 매장 기본 정보 -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">매장 기본 정보</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table">
+                        <tr>
+                            <th style="width: 30%">매장명</th>
+                            <td>{{ store.name }}</td>
+                        </tr>
+                        <tr>
+                            <th>국가</th>
+                            <td>{{ store.get_country_display }}</td>
+                        </tr>
+                        <tr>
+                            <th>주소</th>
+                            <td>{{ store.address|linebreaks }}</td>
+                        </tr>
+                        <tr>
+                            <th>연락처</th>
+                            <td>{{ store.phone_number }}</td>
+                        </tr>
+                        <tr>
+                            <th>이메일</th>
+                            <td>{{ store.email|default:"-" }}</td>
+                        </tr>
+                        <tr>
+                            <th>등록일</th>
+                            <td>{{ store.created_at|date:"Y-m-d H:i" }}</td>
+                        </tr>
+                        <tr>
+                            <th>최종 수정일</th>
+                            <td>{{ store.updated_at|date:"Y-m-d H:i" }}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 매장 직원 목록 -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">매장 직원 목록</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>#</th>
+                                    <th>이름</th>
+                                    <th>사용자명</th>
+                                    <th>직책</th>
+                                    <th>연락처</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for employee in employees %}
+                                <tr>
+                                    <td>{{ forloop.counter }}</td>
+                                    <td>{{ employee.get_full_name|default:employee.username }}</td>
+                                    <td>{{ employee.username }}</td>
+                                    <td>{{ employee.get_user_type_display }}</td>
+                                    <td>{{ employee.phone_number|default:"-" }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="5" class="text-center py-3">등록된 직원이 없습니다.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,103 @@
+<!-- filepath: /Users/colacan/Source/dev/python/salemgr/sales/templates/sales/sale_cancel_form.html -->
+{% extends 'base.html' %}
+
+{% block title %}판매 취소 - 화장품 매장 관리 시스템{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0">판매 취소</h1>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'sales:sale_list' %}">판매 내역</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'sales:sale_detail' sale.id %}">판매 상세</a></li>
+                    <li class="breadcrumb-item active">취소</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card border-warning">
+                <div class="card-header bg-warning">
+                    <h5 class="mb-0">판매 취소</h5>
+                </div>
+                <div class="card-body">
+                    {% if not sale.can_be_cancelled %}
+                        <div class="alert alert-danger">
+                            <i class="bi bi-x-circle-fill me-2"></i>
+                            <strong>취소 불가:</strong> 이 판매는 취소할 수 없습니다. 판매일로부터 7일이 지났거나 이미 취소/환불된 내역입니다.
+                        </div>
+                        <div class="d-flex justify-content-end">
+                            <a href="{% url 'sales:sale_detail' sale.id %}" class="btn btn-secondary">
+                                돌아가기
+                            </a>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-warning">
+                            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                            <strong>주의!</strong> 판매를 취소하면 관련된 상품의 재고가 원상복구됩니다.
+                        </div>
+                        
+                        <div class="mb-4">
+                            <h6 class="mb-3">판매 정보</h6>
+                            <table class="table">
+                                <tr>
+                                    <th style="width: 30%">판매번호</th>
+                                    <td>{{ sale.sale_number }}</td>
+                                </tr>
+                                <tr>
+                                    <th>판매일시</th>
+                                    <td>{{ sale.sale_date|date:"Y-m-d H:i" }}</td>
+                                </tr>
+                                <tr>
+                                    <th>총 금액</th>
+                                    <td>{{ sale.final_amount|floatformat:0 }}원</td>
+                                </tr>
+                                <tr>
+                                    <th>상품 목록</th>
+                                    <td>
+                                        <ul class="mb-0 ps-3">
+                                            {% for item in sale.saleitems.all %}
+                                                <li>{{ item.product.name }} - {{ item.quantity }}개</li>
+                                            {% endfor %}
+                                        </ul>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                        
+                        <form method="post">
+                            {% csrf_token %}
+                            <div class="mb-3">
+                                <label for="{{ form.notes.id_for_label }}" class="form-label">취소 사유 *</label>
+                                <textarea name="{{ form.notes.html_name }}" 
+                                        id="{{ form.notes.id_for_label }}" 
+                                        class="form-control {% if form.notes.errors %}is-invalid{% endif %}" 
+                                        rows="4" required>{{ form.notes.value|default:'' }}</textarea>
+                                {% if form.notes.errors %}
+                                    <div class="invalid-feedback">
+                                        {{ form.notes.errors|join:", " }}
+                                    </div>
+                                {% endif %}
+                                <small class="form-text text-muted">취소 이유를 자세히 기록해주세요.</small>
+                            </div>
+                            
+                            <div class="d-flex justify-content-between mt-4">
+                                <a href="{% url 'sales:sale_detail' sale.id %}" class="btn btn-secondary">
+                                    취소
+                                </a>
+                                <button type="submit" class="btn btn-warning">
+                                    <i class="bi bi-x-circle me-1"></i> 판매 취소 확정
+                                </button>
+                            </div>
+                        </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

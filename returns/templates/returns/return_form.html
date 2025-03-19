@@ -1,0 +1,828 @@
+{% extends 'base.html' %}
+
+{% block title %}
+    {% if is_update %}반품 정보 수정{% else %}새 반품 등록{% endif %} - 화장품 매장 관리 시스템
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0">{% if is_update %}반품 정보 수정{% else %}새 반품 등록{% endif %}</h1>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'returns:return_list' %}">반품 목록</a></li>
+                    {% if is_update %}
+                        <li class="breadcrumb-item"><a href="{% url 'returns:return_detail' form.instance.id %}">반품 상세</a></li>
+                        <li class="breadcrumb-item active">수정</li>
+                    {% else %}
+                        <li class="breadcrumb-item active">반품 등록</li>
+                    {% endif %}
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <form method="post" id="returnForm">
+        {% csrf_token %}
+        <div class="row">
+            <!-- 반품 정보 -->
+            <div class="col-md-4 mb-4">
+                <div class="card h-100">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">고객 및 반품 정보</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-3">
+                            <div class="col-md-12">
+                                <label for="{{ form.sale.id_for_label }}" class="form-label">원본 판매*</label>
+                                {{ form.sale }}
+                                {% if form.sale.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.sale.errors|join:", " }}
+                                    </div>
+                                {% endif %}
+                                <div class="form-text">반품할 원본 판매를 선택하세요.</div>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="{{ form.store.id_for_label }}" class="form-label">반품 매장*</label>
+                                {{ form.store }}
+                                {% if form.store.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.store.errors|join:", " }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="{{ form.return_date.id_for_label }}" class="form-label">반품 일시*</label>
+                                {{ form.return_date }}
+                                {% if form.return_date.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.return_date.errors|join:", " }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="{{ form.customer_name.id_for_label }}" class="form-label">고객명</label>
+                                {{ form.customer_name }}
+                                {% if form.customer_name.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.customer_name.errors|join:", " }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="{{ form.customer_phone.id_for_label }}" class="form-label">고객 연락처</label>
+                                {{ form.customer_phone }}
+                                {% if form.customer_phone.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.customer_phone.errors|join:", " }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.refund_method.id_for_label }}" class="form-label">환불 방식*</label>
+                            {{ form.refund_method }}
+                            {% if form.refund_method.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.refund_method.errors|join:", " }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.reason.id_for_label }}" class="form-label">반품 사유*</label>
+                            {{ form.reason }}
+                            {% if form.reason.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.reason.errors|join:", " }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.notes.id_for_label }}" class="form-label">비고</label>
+                            {{ form.notes }}
+                            {% if form.notes.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.notes.errors|join:", " }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <input type="hidden" name="{{ form.product.html_name }}" id="{{ form.product.id_for_label }}" value="{{ form.product.value|default:'' }}">
+                    </div>
+                </div>
+            </div>
+
+            <!-- 반품 상품 목록 -->
+            <div class="col-md-8 mb-4">
+                <div class="card h-100">
+                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">반품 상품 목록</h5>
+                        <button type="button" class="btn btn-sm btn-light" id="addItemBtn">
+                            <i class="bi bi-plus"></i> 상품 추가
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <!-- 상품 목록 폼셋 -->
+                        <table class="table table-hover" id="itemTable">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>상품</th>
+                                    <th style="width: 100px;">수량</th>
+                                    <th>판매가</th>
+                                    <th>환불액</th>
+                                    <th>상품상태</th>
+                                    <th>재입고</th>
+                                    <th style="width: 50px;"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="itemTableBody">
+                                {{ item_formset.management_form }}
+                                {% for form in item_formset.forms %}
+                                    {% if not form.instance.pk or not form.DELETE.value %}
+                                    <tr class="item-row">
+                                        <td>
+                                            {{ form.id }}
+                                            {{ form.product }}
+                                            {{ form.sale_item }}
+                                            {% if form.sale_item.errors %}
+                                                <div class="invalid-feedback d-block">
+                                                    {{ form.sale_item.errors|join:", " }}
+                                                </div>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {{ form.quantity }}
+                                            {{ form.max_quantity }}
+                                            {% if form.quantity.errors %}
+                                                <div class="invalid-feedback d-block">
+                                                    {{ form.quantity.errors|join:", " }}
+                                                </div>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <div class="input-group input-group-sm">
+                                                {{ form.price }}
+                                                <span class="input-group-text">원</span>
+                                            </div>
+                                            {% if form.price.errors %}
+                                                <div class="invalid-feedback d-block">
+                                                    {{ form.price.errors|join:", " }}
+                                                </div>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <div class="input-group input-group-sm">
+                                                {{ form.refund_amount }}
+                                                <span class="input-group-text">원</span>
+                                            </div>
+                                            {% if form.refund_amount.errors %}
+                                                <div class="invalid-feedback d-block">
+                                                    {{ form.refund_amount.errors|join:", " }}
+                                                </div>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {{ form.condition }}
+                                            {% if form.condition.errors %}
+                                                <div class="invalid-feedback d-block">
+                                                    {{ form.condition.errors|join:", " }}
+                                                </div>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-center">
+                                            {{ form.restock }}
+                                            {% if form.restock.errors %}
+                                                <div class="invalid-feedback d-block">
+                                                    {{ form.restock.errors|join:", " }}
+                                                </div>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if form.instance.pk %}
+                                                {{ form.DELETE }}
+                                                <button type="button" class="btn btn-sm btn-outline-danger remove-item">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            {% else %}
+                                                <button type="button" class="btn btn-sm btn-outline-danger remove-item">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endif %}
+                                {% endfor %}
+                            </tbody>
+                        </table>
+
+                        <!-- 합계 -->
+                        <div class="row mt-4">
+                            <div class="col-md-6 offset-md-6">
+                                <table class="table table-bordered">
+                                    <tr class="table-primary">
+                                        <th>총 환불 금액</th>
+                                        <td class="text-end" id="totalRefundAmount">0원</td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 판매 상품 원본 목록 -->
+            <div class="col-md-12 mb-4" id="saleItemsSection">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">판매 상품 원본 목록</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="saleItemsPlaceholder" class="text-center py-3 {% if sale_items %}d-none{% endif %}">
+                            <p class="text-muted mb-0">판매를 선택하면 해당 판매의 상품 목록이 표시됩니다.</p>
+                        </div>
+                        
+                        <div id="saleItemsList" class="{% if not sale_items %}d-none{% endif %}">
+                            <table class="table table-hover" id="originalSaleTable">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>상품 코드</th>
+                                        <th>상품명</th>
+                                        <th>판매 수량</th>
+                                        <th>판매 가격</th>
+                                        <th>소계</th>
+                                        <th>액션</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% if sale_items %}
+                                        {% for item in sale_items %}
+                                        <tr class="sale-item-row" data-id="{{ item.id }}" data-product-id="{{ item.product.id }}" data-price="{{ item.price }}" data-quantity="{{ item.quantity }}">
+                                            <td>{{ item.product.code }}</td>
+                                            <td>{{ item.product.name }}</td>
+                                            <td>{{ item.quantity }}</td>
+                                            <td>{{ item.price|floatformat:0 }}원</td>
+                                            <td>{{ item.subtotal|floatformat:0 }}원</td>
+                                            <td>
+                                                <button type="button" class="btn btn-sm btn-outline-primary add-to-return" 
+                                                        data-id="{{ item.id }}" 
+                                                        data-name="{{ item.product.name }}"
+                                                        data-price="{{ item.price }}"
+                                                        data-quantity="{{ item.quantity }}">
+                                                    <i class="bi bi-plus-circle"></i> 반품 추가
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    {% endif %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 하단 버튼 -->
+        <div class="d-flex justify-content-between mb-4">
+            <a href="{% if is_update %}{% url 'returns:return_detail' form.instance.id %}{% else %}{% url 'returns:return_list' %}{% endif %}" class="btn btn-secondary">
+                취소
+            </a>
+            <button type="submit" class="btn btn-primary" id="submitBtn">
+                {% if is_update %}변경사항 저장{% else %}반품 등록{% endif %}
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // 초기화
+        updateTotalRefundAmount();
+        
+        // 폼셋 관리를 위한 변수들
+        const itemTable = document.getElementById('itemTableBody');
+        const itemFormPrefix = '{{ item_formset.prefix }}';
+        let itemFormCount = {{ item_formset.total_form_count }};
+        const maxForms = parseInt('{{ item_formset.max_num }}');
+        
+        // 판매 선택 시 이벤트
+        const saleSelect = document.getElementById('{{ form.sale.id_for_label }}');
+        const saleItemsPlaceholder = document.getElementById('saleItemsPlaceholder');
+        const saleItemsList = document.getElementById('saleItemsList');
+        
+        // 판매 선택 시 상품 목록 가져오기
+        saleSelect.addEventListener('change', function() {
+            const saleId = this.value;
+            if (saleId) {
+                fetchSaleItems(saleId);
+                
+                // 이미 생성된 반품 항목 폼이 있으면서 새로운 판매를 선택한 경우 알림
+                if (document.querySelectorAll('.item-row').length > 0) {
+                    if (confirm('판매를 변경하면 현재 추가된 반품 항목이 모두 삭제됩니다. 계속하시겠습니까?')) {
+                        clearReturnItems();
+                    } else {
+                        // 이전 판매로 되돌리기
+                        return;
+                    }
+                }
+            } else {
+                clearSaleItems();
+                clearReturnItems();
+            }
+        });
+
+        // 판매 항목 정보 가져오기
+        function fetchSaleItems(saleId) {
+            // 로딩 표시
+            saleItemsPlaceholder.textContent = '판매 상품을 불러오는 중...';
+            saleItemsPlaceholder.classList.remove('d-none');
+            saleItemsList.classList.add('d-none');
+            
+            fetch(`/returns/api/sale-items/?sale_id=${saleId}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('네트워크 응답이 올바르지 않습니다');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.items && data.items.length > 0) {
+                        displaySaleItems(data.items);
+                        
+                        // 판매 정보에 따른 고객 정보 자동 설정
+                        if (data.customer_name) {
+                            document.getElementById('{{ form.customer_name.id_for_label }}').value = data.customer_name;
+                        }
+                        if (data.customer_phone) {
+                            document.getElementById('{{ form.customer_phone.id_for_label }}').value = data.customer_phone;
+                        }
+                        
+                        // 판매 매장으로 반품 매장 자동 설정
+                        if (data.store_id) {
+                            const storeSelect = document.getElementById('{{ form.store.id_for_label }}');
+                            for (let i = 0; i < storeSelect.options.length; i++) {
+                                if (storeSelect.options[i].value == data.store_id) {
+                                    storeSelect.selectedIndex = i;
+                                    break;
+                                }
+                            }
+                        }
+                    } else {
+                        // 판매 항목이 없는 경우
+                        saleItemsPlaceholder.textContent = '이 판매에 연결된 상품이 없습니다.';
+                        saleItemsPlaceholder.classList.remove('d-none');
+                        saleItemsList.classList.add('d-none');
+                    }
+                })
+                .catch(error => {
+                    console.error('판매 항목을 가져오는 중 오류 발생:', error);
+                    saleItemsPlaceholder.textContent = '판매 항목을 불러오는 데 실패했습니다. 잠시 후 다시 시도해주세요.';
+                    saleItemsPlaceholder.classList.remove('d-none');
+                    saleItemsList.classList.add('d-none');
+                });
+        }
+
+        // 판매 항목 표시
+        function displaySaleItems(items) {
+            const tableBody = document.querySelector('#originalSaleTable tbody');
+            
+            // 테이블 초기화
+            tableBody.innerHTML = '';
+            
+            // 항목 추가
+            items.forEach(item => {
+                const row = document.createElement('tr');
+                row.className = 'sale-item-row';
+                row.setAttribute('data-id', item.id);
+                row.setAttribute('data-product-id', item.product_id);
+                row.setAttribute('data-price', item.price);
+                row.setAttribute('data-quantity', item.quantity);
+                
+                const subtotal = parseFloat(item.price) * parseInt(item.quantity);
+                
+                row.innerHTML = `
+                    <td>${item.product_code || ''}</td>
+                    <td>${item.product_name || ''}</td>
+                    <td>${item.quantity}</td>
+                    <td>${parseFloat(item.price).toLocaleString()}원</td>
+                    <td>${subtotal.toLocaleString()}원</td>
+                    <td>
+                        <button type="button" class="btn btn-sm btn-outline-primary add-to-return"
+                                data-id="${item.id}"
+                                data-name="${item.product_name}"
+                                data-price="${item.price}"
+                                data-quantity="${item.quantity}">
+                            <i class="bi bi-plus-circle"></i> 반품 추가
+                        </button>
+                    </td>
+                `;
+                
+                tableBody.appendChild(row);
+            });
+            
+            // 반품 추가 버튼에 이벤트 리스너 추가
+            document.querySelectorAll('.add-to-return').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const saleItemId = this.getAttribute('data-id');
+                    const productName = this.getAttribute('data-name');
+                    const price = parseFloat(this.getAttribute('data-price'));
+                    const maxQuantity = parseInt(this.getAttribute('data-quantity'));
+                    
+                    addItemFromSale(saleItemId, productName, price, maxQuantity);
+                });
+            });
+            
+            // 표시 설정
+            saleItemsPlaceholder.classList.add('d-none');
+            saleItemsList.classList.remove('d-none');
+        }
+
+        // 판매 항목 초기화
+        function clearSaleItems() {
+            const tableBody = document.querySelector('#originalSaleTable tbody');
+            tableBody.innerHTML = '';
+            saleItemsPlaceholder.textContent = '판매를 선택하면 해당 판매의 상품 목록이 표시됩니다.';
+            saleItemsPlaceholder.classList.remove('d-none');
+            saleItemsList.classList.add('d-none');
+        }
+        
+        // 반품 항목 초기화
+        function clearReturnItems() {
+            document.querySelectorAll('.item-row').forEach(row => {
+                const deleteInput = row.querySelector('input[name$="-DELETE"]');
+                if (deleteInput) {
+                    deleteInput.value = 'on';
+                    row.style.display = 'none';
+                } else {
+                    row.remove();
+                }
+            });
+            updateTotalRefundAmount();
+        }
+        
+        // 상품 추가 버튼 클릭 이벤트
+        document.getElementById('addItemBtn').addEventListener('click', function() {
+            // 판매가 선택되었는지 확인
+            if (!saleSelect.value) {
+                alert('먼저 반품할 판매를 선택해주세요.');
+                saleSelect.focus();
+                return;
+            }
+            addItemRow();
+        });
+
+        // 상품 행 삭제 이벤트 추가
+        document.querySelectorAll('.remove-item').forEach(btn => {
+            btn.addEventListener('click', function() {
+                removeItemRow(this);
+            });
+        });
+
+        // 판매 상품 목록에서 반품 추가 버튼 클릭 이벤트
+        document.querySelectorAll('.add-to-return').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const saleItemId = this.getAttribute('data-id');
+                const productName = this.getAttribute('data-name');
+                const price = parseFloat(this.getAttribute('data-price'));
+                const maxQuantity = parseInt(this.getAttribute('data-quantity'));
+                
+                addItemFromSale(saleItemId, productName, price, maxQuantity);
+            });
+        });
+
+        // 수량, 가격 변경 시 환불 금액 업데이트
+        document.querySelectorAll('input[name$="-quantity"], input[name$="-price"]').forEach(input => {
+            input.addEventListener('change', function() {
+                updateRefundAmount(this.closest('.item-row'));
+                updateTotalRefundAmount();
+            });
+        });
+
+        // 환불 금액 변경 시 총 합계 업데이트
+        document.querySelectorAll('input[name$="-refund_amount"]').forEach(input => {
+            input.addEventListener('change', function() {
+                updateTotalRefundAmount();
+            });
+        });
+
+        // 상품 추가 행 함수
+        function addItemRow() {
+            // 최대 항목 수 체크
+            if (itemFormCount >= maxForms) {
+                alert(`최대 ${maxForms}개의 상품만 추가할 수 있습니다.`);
+                return;
+            }
+            
+            const newRow = document.createElement('tr');
+            newRow.className = 'item-row';
+            
+            // 판매 항목 옵션 생성
+            let saleItemOptions = '<option value="">-- 상품 선택 --</option>';
+            
+            // 판매가 선택된 경우 해당 판매의 항목만 표시
+            if (saleSelect.value) {
+                document.querySelectorAll('#originalSaleTable .sale-item-row').forEach(row => {
+                    const id = row.getAttribute('data-id');
+                    const productName = row.querySelector('td:nth-child(2)').textContent;
+                    const productCode = row.querySelector('td:nth-child(1)').textContent;
+                    const price = row.getAttribute('data-price');
+                    const quantity = row.getAttribute('data-quantity');
+                    
+                    saleItemOptions += `<option value="${id}" data-price="${price}" data-quantity="${quantity}">${productCode} - ${productName}</option>`;
+                });
+            }
+            
+            // 행 템플릿 생성
+            const template = `
+                <td>
+                    <input type="hidden" name="${itemFormPrefix}-${itemFormCount}-product" id="${itemFormPrefix}-${itemFormCount}-product">
+                    <select name="${itemFormPrefix}-${itemFormCount}-sale_item" id="${itemFormPrefix}-${itemFormCount}-sale_item" class="form-select">
+                        ${saleItemOptions}
+                    </select>
+                </td>
+                <td>
+                    <input type="number" name="${itemFormPrefix}-${itemFormCount}-quantity" id="${itemFormPrefix}-${itemFormCount}-quantity" class="form-control" value="1" min="1">
+                    <input type="hidden" name="${itemFormPrefix}-${itemFormCount}-max_quantity" id="${itemFormPrefix}-${itemFormCount}-max_quantity" value="999">
+                </td>
+                <td>
+                    <div class="input-group input-group-sm">
+                        <input type="number" name="${itemFormPrefix}-${itemFormCount}-price" id="${itemFormPrefix}-${itemFormCount}-price" class="form-control" value="0" readonly>
+                        <span class="input-group-text">원</span>
+                    </div>
+                </td>
+                <td>
+                    <div class="input-group input-group-sm">
+                        <input type="number" name="${itemFormPrefix}-${itemFormCount}-refund_amount" id="${itemFormPrefix}-${itemFormCount}-refund_amount" class="form-control" value="0">
+                        <span class="input-group-text">원</span>
+                    </div>
+                </td>
+                <td>
+                    <select name="${itemFormPrefix}-${itemFormCount}-condition" id="${itemFormPrefix}-${itemFormCount}-condition" class="form-select">
+                        <option value="new">미개봉</option>
+                        <option value="opened">개봉됨</option>
+                        <option value="used">사용됨</option>
+                        <option value="damaged">훼손됨</option>
+                    </select>
+                </td>
+                <td class="text-center">
+                    <input type="checkbox" name="${itemFormPrefix}-${itemFormCount}-restock" id="${itemFormPrefix}-${itemFormCount}-restock" class="form-check-input" checked>
+                </td>
+                <td>
+                    <button type="button" class="btn btn-sm btn-outline-danger remove-item">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </td>
+            `;
+            
+            newRow.innerHTML = template;
+            itemTable.appendChild(newRow);
+            
+            // 이벤트 리스너 추가
+            const newSaleItemSelect = newRow.querySelector(`[name="${itemFormPrefix}-${itemFormCount}-sale_item"]`);
+            const newQuantityInput = newRow.querySelector(`[name="${itemFormPrefix}-${itemFormCount}-quantity"]`);
+            const newRefundInput = newRow.querySelector(`[name="${itemFormPrefix}-${itemFormCount}-refund_amount"]`);
+            
+            newRow.querySelector('.remove-item').addEventListener('click', function() {
+                removeItemRow(this);
+            });
+            
+            newSaleItemSelect.addEventListener('change', function() {
+                const option = this.options[this.selectedIndex];
+                if (option && option.value) {
+                    const price = option.getAttribute('data-price');
+                    const maxQuantity = option.getAttribute('data-quantity');
+                    
+                    newRow.querySelector(`[name="${itemFormPrefix}-${itemFormCount}-price"]`).value = price;
+                    newRow.querySelector(`[name="${itemFormPrefix}-${itemFormCount}-max_quantity"]`).value = maxQuantity;
+                    
+                    updateRefundAmount(newRow);
+                    updateTotalRefundAmount();
+                }
+            });
+            
+            newQuantityInput.addEventListener('change', function() {
+                updateRefundAmount(newRow);
+                updateTotalRefundAmount();
+            });
+            
+            newRefundInput.addEventListener('change', function() {
+                updateTotalRefundAmount();
+            });
+            
+            // 폼셋 카운트 업데이트
+            itemFormCount += 1;
+            document.querySelector(`#id_${itemFormPrefix}-TOTAL_FORMS`).value = itemFormCount;
+            
+            // MANAGEMENT_FORM_INITIAL 설정이 없으면 추가
+            if (!document.querySelector(`#id_${itemFormPrefix}-INITIAL_FORMS`)) {
+                const initialForm = document.createElement('input');
+                initialForm.type = 'hidden';
+                initialForm.id = `id_${itemFormPrefix}-INITIAL_FORMS`;
+                initialForm.name = `${itemFormPrefix}-INITIAL_FORMS`;
+                initialForm.value = '0';
+                document.getElementById('returnForm').appendChild(initialForm);
+            }
+            
+            // MIN_NUM_FORMS가 없으면 추가
+            if (!document.querySelector(`#id_${itemFormPrefix}-MIN_NUM_FORMS`)) {
+                const minForm = document.createElement('input');
+                minForm.type = 'hidden';
+                minForm.id = `id_${itemFormPrefix}-MIN_NUM_FORMS`;
+                minForm.name = `${itemFormPrefix}-MIN_NUM_FORMS`;
+                minForm.value = '0';
+                document.getElementById('returnForm').appendChild(minForm);
+            }
+            
+            // MAX_NUM_FORMS가 없으면 추가
+            if (!document.querySelector(`#id_${itemFormPrefix}-MAX_NUM_FORMS`)) {
+                const maxForm = document.createElement('input');
+                maxForm.type = 'hidden';
+                maxForm.id = `id_${itemFormPrefix}-MAX_NUM_FORMS`;
+                maxForm.name = `${itemFormPrefix}-MAX_NUM_FORMS`;
+                maxForm.value = maxForms;
+                document.getElementById('returnForm').appendChild(maxForm);
+            }
+        }
+
+        // 상품 행 제거 함수
+        function removeItemRow(button) {
+            const row = button.closest('.item-row');
+            const deleteInput = row.querySelector('input[name$="-DELETE"]');
+            
+            if (deleteInput) {
+                // 기존 행인 경우 숨기고 DELETE 필드 체크
+                deleteInput.value = 'on';
+                row.style.display = 'none';
+            } else {
+                // 새 행인 경우 직접 제거
+                row.remove();
+            }
+            
+            updateTotalRefundAmount();
+        }
+
+        // 판매 항목에서 반품 항목으로 추가하는 함수
+        function addItemFromSale(saleItemId, productName, price, maxQuantity) {
+            // 이미 동일한 항목이 있는지 확인
+            let existingRow = null;
+            document.querySelectorAll('.item-row').forEach(row => {
+                if (row.style.display !== 'none') {
+                    const saleItemSelect = row.querySelector('select[name$="-sale_item"]');
+                    if (saleItemSelect && saleItemSelect.value == saleItemId) {
+                        existingRow = row;
+                        return;
+                    }
+                }
+            });
+            
+            if (existingRow) {
+                // 이미 추가된 항목이라면 사용자에게 알림
+                alert(`이미 "${productName}" 상품이 반품 목록에 추가되어 있습니다.`);
+                return;
+            }
+            
+            // 새 행 추가
+            addItemRow();
+            
+            // 방금 추가된 행 가져오기
+            const newRow = itemTable.lastElementChild;
+            
+            // 판매 항목 선택
+            const saleItemSelect = newRow.querySelector('select[name$="-sale_item"]');
+            for (let i = 0; i < saleItemSelect.options.length; i++) {
+                if (saleItemSelect.options[i].value == saleItemId) {
+                    saleItemSelect.selectedIndex = i;
+                    break;
+                }
+            }
+            
+            // 가격, 수량 등 설정
+            const priceInput = newRow.querySelector('input[name$="-price"]');
+            const quantityInput = newRow.querySelector('input[name$="-quantity"]');
+            const refundInput = newRow.querySelector('input[name$="-refund_amount"]');
+            const maxQuantityInput = newRow.querySelector('input[name$="-max_quantity"]');
+            
+            priceInput.value = price;
+            quantityInput.max = maxQuantity;
+            maxQuantityInput.value = maxQuantity;
+            
+            // 환불 금액 자동 계산
+            updateRefundAmount(newRow);
+            updateTotalRefundAmount();
+            
+            // 추가 성공 메시지
+            const addButton = document.querySelector(`.add-to-return[data-id="${saleItemId}"]`);
+            if (addButton) {
+                const originalText = addButton.innerHTML;
+                addButton.innerHTML = '<i class="bi bi-check-lg"></i> 추가됨';
+                addButton.classList.remove('btn-outline-primary');
+                addButton.classList.add('btn-success');
+                
+                // 3초 후 원래 버튼으로 복원
+                setTimeout(() => {
+                    addButton.innerHTML = originalText;
+                    addButton.classList.remove('btn-success');
+                    addButton.classList.add('btn-outline-primary');
+                }, 3000);
+            }
+        }
+
+        // 행별 환불 금액 업데이트
+        function updateRefundAmount(row) {
+            const priceInput = row.querySelector('input[name$="-price"]');
+            const quantityInput = row.querySelector('input[name$="-quantity"]');
+            const refundInput = row.querySelector('input[name$="-refund_amount"]');
+            const maxQuantityInput = row.querySelector('input[name$="-max_quantity"]');
+            
+            const price = parseFloat(priceInput.value) || 0;
+            const quantity = parseInt(quantityInput.value) || 0;
+            const maxQuantity = parseInt(maxQuantityInput.value) || 999;
+            
+            // 수량 검증
+            if (quantity > maxQuantity) {
+                alert(`최대 ${maxQuantity}개까지만 반품 가능합니다.`);
+                quantityInput.value = maxQuantity;
+            }
+            
+            // 환불 금액 계산
+            const refundAmount = price * quantity;
+            refundInput.value = refundAmount;
+        }
+
+        // 총 환불 금액 업데이트
+        function updateTotalRefundAmount() {
+            let total = 0;
+            
+            document.querySelectorAll('.item-row').forEach(row => {
+                if (row.style.display !== 'none') {
+                    const refundInput = row.querySelector('input[name$="-refund_amount"]');
+                    if (refundInput) {
+                        total += parseFloat(refundInput.value) || 0;
+                    }
+                }
+            });
+            
+            const totalElement = document.getElementById('totalRefundAmount');
+            if (totalElement) {
+                totalElement.textContent = `${total.toLocaleString()}원`;
+            }
+        }
+        
+        // 폼 제출 전 유효성 검사
+        document.getElementById('returnForm').addEventListener('submit', function(e) {
+            // 판매가 선택되었는지 확인
+            if (!saleSelect.value) {
+                e.preventDefault();
+                alert('반품할 판매를 선택해주세요.');
+                saleSelect.focus();
+                return false;
+            }
+            
+            // 반품 항목이 하나 이상 있는지 확인
+            let hasVisibleItems = false;
+            document.querySelectorAll('.item-row').forEach(row => {
+                if (row.style.display !== 'none') {
+                    hasVisibleItems = true;
+                }
+            });
+            
+            if (!hasVisibleItems) {
+                e.preventDefault();
+                alert('최소한 하나 이상의 반품 항목을 추가해주세요.');
+                return false;
+            }
+            
+            // 모든 필수 항목이 입력되었는지 확인
+            const requiredFields = [
+                { id: '{{ form.store.id_for_label }}', name: '반품 매장' },
+                { id: '{{ form.return_date.id_for_label }}', name: '반품 일시' },
+                { id: '{{ form.refund_method.id_for_label }}', name: '환불 방식' }
+            ];
+            
+            for (let field of requiredFields) {
+                const element = document.getElementById(field.id);
+                if (!element.value) {
+                    e.preventDefault();
+                    alert(`${field.name}을(를) 입력해주세요.`);
+                    element.focus();
+                    return false;
+                }
+            }
+            
+            return true;
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,118 @@
+<!-- filepath: /Users/colacan/Source/dev/python/salemgr/inventory/templates/inventory/stock_adjustment_detail.html -->
+{% extends 'base.html' %}
+
+{% block title %}재고 조정 상세 정보 - 화장품 매장 관리 시스템{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-0">재고 조정 상세 정보</h1>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'inventory:stock_adjustment_list' %}">재고 조정 목록</a></li>
+                <li class="breadcrumb-item active">재고 조정 상세</li>
+            </ol>
+        </nav>
+    </div>
+    <div>
+        <div class="btn-group">
+            {% if user.user_type == 'app_admin' or user.user_type == 'store_manager' %}
+            <a href="{% url 'inventory:stock_adjustment_delete' adjustment.id %}" class="btn btn-outline-danger">
+                <i class="bi bi-trash"></i> 삭제
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- 조정 정보 -->
+    <div class="col-md-8 mb-4">
+        <div class="card h-100">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">조정 정보</h5>
+            </div>
+            <div class="card-body">
+                <table class="table">
+                    <tr>
+                        <th style="width: 30%">조정 유형</th>
+                        <td>
+                            <span class="badge {% if adjustment.adjustment_type == 'increase' %}bg-success{% else %}bg-danger{% endif %} fs-6">
+                                {{ adjustment.get_adjustment_type_display }}
+                            </span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>조정 수량</th>
+                        <td>{{ adjustment.quantity }}개</td>
+                    </tr>
+                    <tr>
+                        <th>조정 날짜</th>
+                        <td>{{ adjustment.adjustment_date|date:"Y년 m월 d일" }}</td>
+                    </tr>
+                    <tr>
+                        <th>매장</th>
+                        <td>{{ adjustment.store.name }}</td>
+                    </tr>
+                    <tr>
+                        <th>등록자</th>
+                        <td>{{ adjustment.created_by.username|default:"-" }}</td>
+                    </tr>
+                    <tr>
+                        <th>등록일시</th>
+                        <td>{{ adjustment.created_at|date:"Y-m-d H:i" }}</td>
+                    </tr>
+                </table>
+                
+                <div class="mt-4">
+                    <h6 class="mb-2">조정 사유</h6>
+                    <div class="border rounded p-3 bg-light">
+                        {{ adjustment.reason|linebreaks|default:"사유가 입력되지 않았습니다." }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 상품 정보 -->
+    <div class="col-md-4 mb-4">
+        <div class="card h-100">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">상품 정보</h5>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-4">
+                    {% if adjustment.product.image %}
+                        <img src="{{ adjustment.product.image.url }}" alt="{{ adjustment.product.name }}" class="img-fluid rounded" style="max-height: 150px;">
+                    {% else %}
+                        <div class="bg-light text-center p-4 rounded">
+                            <i class="bi bi-image text-muted" style="font-size: 3rem;"></i>
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <h5 class="card-title">{{ adjustment.product.name }}</h5>
+                <p class="card-text text-muted mb-2">코드: {{ adjustment.product.code }}</p>
+                <p class="card-text text-muted mb-3">카테고리: {% if adjustment.product.category %}{{ adjustment.product.category.name }}{% else %}-{% endif %}</p>
+                
+                <div class="alert alert-info">
+                    <div class="d-flex justify-content-between">
+                        <strong>현재 재고:</strong>
+                        <span>{{ adjustment.product.get_current_stock }}개 (전체 매장)</span>
+                    </div>
+                    <div class="d-flex justify-content-between mt-1">
+                        <strong>{{ adjustment.store.name }} 재고:</strong>
+                        <span>{{ adjustment.product.get_current_stock|default:0 }}개</span>
+                    </div>
+                </div>
+                
+                <div class="d-grid gap-2 mt-3">
+                    <a href="{% url 'inventory:product_detail' adjustment.product.id %}" class="btn btn-outline-primary">
+                        <i class="bi bi-box me-1"></i> 상품 상세 정보
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
