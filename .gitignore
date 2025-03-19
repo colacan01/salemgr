@@ -107,6 +107,7 @@ yarn-debug.log*
 yarn-error.log*
 pyvenv.cfg
 manage.py
+Scripts/
 
 # Security Key
 *.pem
