@@ -51,13 +51,22 @@
                         <select name="{{ form.store.html_name }}" 
                                id="{{ form.store.id_for_label }}" 
                                class="form-select {% if form.store.errors %}is-invalid{% endif %}"
-                               required>
-                            <option value="">-- 매장 선택 --</option>
-                            {% for choice in form.store.field.queryset %}
-                                <option value="{{ choice.id }}" {% if form.store.value|stringformat:"i" == choice.id|stringformat:"i" %}selected{% endif %}>
-                                    {{ choice.name }} ({{ choice.get_country_display }})
-                                </option>
-                            {% endfor %}
+                               required
+                               {% if not is_app_admin %}disabled{% endif %}>
+                            {% if is_app_admin %}
+                                <option value="">-- 매장 선택 --</option>
+                                {% for choice in form.store.field.queryset %}
+                                    <option value="{{ choice.id }}" {% if form.store.value|stringformat:"i" == choice.id|stringformat:"i" %}selected{% endif %}>
+                                        {{ choice.name }} ({{ choice.get_country_display }})
+                                    </option>
+                                {% endfor %}
+                            {% else %}
+                                {% for choice in form.store.field.queryset %}
+                                    <option value="{{ choice.id }}" {% if form.store.value|stringformat:"i" == choice.id|stringformat:"i" or choice.id|stringformat:"i" == user_store|stringformat:"i" %}selected{% endif %}>
+                                        {{ choice.name }} ({{ choice.get_country_display }})
+                                    </option>
+                                {% endfor %}
+                            {% endif %}
                         </select>
                         {% if form.store.errors %}
                             <div class="invalid-feedback">
@@ -65,7 +74,6 @@
                             </div>
                         {% endif %}
                     </div>
-                </div>
                 
                 <div class="row mb-3">
                     <div class="col-md-4">
@@ -161,6 +169,32 @@
         const storeSelect = document.getElementById('{{ form.store.id_for_label }}');
         const stockInfoElement = document.getElementById('stockInfo');
         
+        // 사용자 매장 및 권한 정보
+        const isAppAdmin = {{ is_app_admin|yesno:"true,false" }};
+        const userStore = "{{ user_store|default:'' }}";
+        
+        // 일반 사용자의 매장 선택 제한
+        if (!isAppAdmin && userStore) {
+            // 매장 선택 필드 비활성화
+            storeSelect.disabled = true;
+            
+            // 사용자의 매장 선택
+            let storeSelected = false;
+            for (let i = 0; i < storeSelect.options.length; i++) {
+                if (storeSelect.options[i].value === userStore) {
+                    storeSelect.options[i].selected = true;
+                    storeSelected = true;
+                    break;
+                }
+            }
+            
+            // 사용자의 매장이 옵션에 없는 경우 처리 (필요시)
+            if (!storeSelected && userStore) {
+                // 서버에서 매장 정보 가져오기 또는 관리자에게 문의하도록 안내
+                console.warn("사용자 매장이 옵션에 없습니다. ID:", userStore);
+            }
+        }
+        
         // 재고 정보 조회 함수
         function checkStockInfo() {
             const productId = productSelect.value;
@@ -191,6 +225,29 @@
         
         // 초기 로드 시 재고 정보 확인
         checkStockInfo();
+        
+        // 조정 날짜 기본값 설정 (아직 설정되지 않은 경우)
+        const adjustmentDateInput = document.getElementById('{{ form.adjustment_date.id_for_label }}');
+        if (!adjustmentDateInput.value) {
+            const today = new Date().toISOString().split('T')[0];
+            adjustmentDateInput.value = today;
+        }
+        
+        // URL에서 product 파라미터를 가져와 자동 선택
+        const urlParams = new URLSearchParams(window.location.search);
+        const productId = urlParams.get('product');
+        if (productId) {
+            for (let i = 0; i < productSelect.options.length; i++) {
+                if (productSelect.options[i].value === productId) {
+                    productSelect.options[i].selected = true;
+                    break;
+                }
+            }
+            // 상품이 선택되었고 매장도 선택되어 있다면 재고 정보 확인
+            if (storeSelect.value) {
+                setTimeout(checkStockInfo, 100);
+            }
+        }
     });
 </script>
 {% endblock %}

@@ -35,13 +35,19 @@
             
             <div class="col-md-3">
                 <label for="store" class="form-label">매장</label>
-                <select name="store" id="store" class="form-select">
-                    <option value="">전체 매장</option>
-                    {% for store in stores %}
-                        <option value="{{ store.id }}" {% if selected_store == store.id|stringformat:'i' %}selected{% endif %}>
-                            {{ store.name }}
-                        </option>
-                    {% endfor %}
+                <select name="store" id="store" class="form-select" {% if not is_app_admin %}disabled{% endif %}>
+                    {% if is_app_admin %}
+                        <option value="">전체 매장</option>
+                        {% for store in stores %}
+                            <option value="{{ store.id }}" {% if selected_store == store.id|stringformat:'i' %}selected{% endif %}>
+                                {{ store.name }}
+                            </option>
+                        {% endfor %}
+                    {% else %}
+                        {% for store in stores %}
+                            <option value="{{ store.id }}" selected>{{ store.name }}</option>
+                        {% endfor %}
+                    {% endif %}
                 </select>
             </div>
             
@@ -118,4 +124,50 @@
         <i class="bi bi-info-circle me-2"></i> 조건에 맞는 입고 내역이 없습니다.
     </div>
 {% endif %}
+{% endblock %}
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const searchForm = document.querySelector('form');
+        const storeSelect = document.getElementById('store');
+        const isAppAdmin = {{ is_app_admin|lower }}; // true 또는 false로 변환
+        const userStore = "{{ user_store }}";
+        
+        if (!isAppAdmin && userStore) {
+            // 폼 제출 시 disabled 속성 때문에 매장 값이 전송되지 않으므로
+            // hidden input으로 값을 추가
+            searchForm.addEventListener('submit', function(e) {
+                // 이미 존재하는 hidden input이 있는지 확인
+                let hiddenInput = document.querySelector('input[name="store"][type="hidden"]');
+                
+                if (!hiddenInput) {
+                    // hidden input 생성
+                    hiddenInput = document.createElement('input');
+                    hiddenInput.type = 'hidden';
+                    hiddenInput.name = 'store';
+                    hiddenInput.value = userStore;
+                    searchForm.appendChild(hiddenInput);
+                }
+            });
+            
+            // 매장 선택 필드 비활성화
+            storeSelect.disabled = true;
+        }
+        
+        // 날짜 기본값 설정 (시작일과 종료일이 설정되지 않았을 경우)
+        const today = new Date();
+        const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+        
+        const startDateInput = document.getElementById('start_date');
+        const endDateInput = document.getElementById('end_date');
+        
+        if (!startDateInput.value) {
+            startDateInput.value = firstDay.toISOString().split('T')[0]; // 현재 월의 1일
+        }
+        
+        if (!endDateInput.value) {
+            endDateInput.value = today.toISOString().split('T')[0]; // 오늘
+        }
+    });
+</script>
 {% endblock %}

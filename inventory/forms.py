@@ -2,7 +2,7 @@ from django import forms
 from django.utils import timezone
 from .models import (
     Category, Product, ProductPrice, StockReceipt, 
-    StockRelease, StockAdjustment
+    StockRelease, StockAdjustment, Store
 )
 
 class CategoryForm(forms.ModelForm):
@@ -113,26 +113,34 @@ class ProductPriceForm(forms.ModelForm):
 class StockReceiptForm(forms.ModelForm):
     class Meta:
         model = StockReceipt
-        fields = ['product', 'store', 'quantity', 'cost_price', 
-                  'receipt_date', 'receipt_number', 'note']
+        fields = ['receipt_number', 'receipt_date', 'store', 'product', 'quantity', 'cost_price', 'note']
         widgets = {
             'receipt_date': forms.DateInput(attrs={'type': 'date'}),
-            'note': forms.Textarea(attrs={'rows': 3}),
+            'notes': forms.Textarea(attrs={'rows': 3}),
         }
-
+    
     def __init__(self, *args, **kwargs):
-        self.user = kwargs.pop('user', None)
+        user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
         
-        # 기본값 설정
-        if not self.is_bound:
-            self.fields['receipt_date'].initial = timezone.now().date()
+        # 매장 선택 필드 설정
+        if user:
+            # 앱 관리자인 경우 모든 매장 선택 가능
+            if user.user_type == 'app_admin':
+                self.fields['store'].queryset = Store.objects.all()
+            # 그 외 사용자는 자신의 매장만 선택 가능
+            elif user.store:
+                self.fields['store'].queryset = Store.objects.filter(id=user.store.id)
+                # 선택지가 하나뿐이면 읽기 전용으로 설정
+                self.fields['store'].widget.attrs['readonly'] = True
+                self.fields['store'].widget.attrs['disabled'] = True  # HTML에서는 disabled 속성 사용
+                # hidden field를 위해 초기값 설정
+                self.initial['store'] = user.store
 
 class StockReleaseForm(forms.ModelForm):
     class Meta:
         model = StockRelease
-        fields = ['product', 'store', 'quantity', 'release_type', 
-                  'release_date', 'note']
+        fields = ['product', 'store', 'quantity', 'release_type', 'release_date', 'note']
         widgets = {
             'release_date': forms.DateInput(attrs={'type': 'date'}),
             'note': forms.Textarea(attrs={'rows': 3}),
@@ -142,38 +150,50 @@ class StockReleaseForm(forms.ModelForm):
         self.user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
         
-        # 기본값 설정
-        if not self.is_bound:
-            self.fields['release_date'].initial = timezone.now().date()
-    
-    def clean(self):
-        cleaned_data = super().clean()
-        product = cleaned_data.get('product')
-        store = cleaned_data.get('store')
-        quantity = cleaned_data.get('quantity')
+        # 기본 오늘 날짜 설정
+        if not self.instance.pk and not self.initial.get('release_date'):
+            self.initial['release_date'] = timezone.now().date()
         
-        # 재고 확인
-        if product and store and quantity:
-            current_stock = product.get_current_stock(store)
-            if quantity > current_stock:
-                raise forms.ValidationError(f"출고 수량({quantity})이 현재 재고({current_stock})보다 많습니다.")
-        
-        return cleaned_data
+        # 사용자에 따른 매장 선택 제한
+        if self.user:
+            if self.user.user_type == 'app_admin':
+                # 앱 관리자는 모든 매장 선택 가능
+                from accounts.models import Store
+                self.fields['store'].queryset = Store.objects.all()
+            elif self.user.store:
+                # 일반 사용자는 자신의 매장만 선택 가능
+                from accounts.models import Store
+                self.fields['store'].queryset = Store.objects.filter(id=self.user.store.id)
+                
+                # 기존 값이 없을 때만 초기값 설정
+                if not self.instance.pk:
+                    self.initial['store'] = self.user.store
 
 class StockAdjustmentForm(forms.ModelForm):
     class Meta:
         model = StockAdjustment
-        fields = ['product', 'store', 'quantity', 'adjustment_type', 
-                  'adjustment_date', 'reason']
+        fields = ['adjustment_date', 'store', 'product', 'adjustment_type', 'quantity', 'reason']
         widgets = {
             'adjustment_date': forms.DateInput(attrs={'type': 'date'}),
             'reason': forms.Textarea(attrs={'rows': 3}),
         }
-
+    
     def __init__(self, *args, **kwargs):
         self.user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
         
-        # 기본값 설정
-        if not self.is_bound:
-            self.fields['adjustment_date'].initial = timezone.now().date()
+        # 기본 오늘 날짜 설정
+        if not self.instance.pk and not self.initial.get('adjustment_date'):
+            self.initial['adjustment_date'] = timezone.now().date()
+        
+        # 사용자에 따른 매장 선택 제한
+        if self.user:
+            if self.user.user_type == 'app_admin':
+                # 앱 관리자는 모든 매장 선택 가능
+                from accounts.models import Store
+                self.fields['store'].queryset = Store.objects.all()
+            elif self.user.store:
+                # 일반 사용자는 자신의 매장만 선택 가능
+                from accounts.models import Store
+                self.fields['store'].queryset = Store.objects.filter(id=self.user.store.id)
+                self.fields['store'].initial = self.user.store
