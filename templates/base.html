@@ -25,13 +25,40 @@
         footer {
             flex-shrink: 0;
         }
+
+        /* 매장 정보 배지 스타일 */
+        .store-badge {
+            background-color: rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.85rem;
+        }
+        
+        /* 모바일 화면에서 사용자 이름과 매장 정보 표시 */
+        @media (max-width: 992px) {
+            .mobile-store-info {
+                display: block !important;
+                margin-top: 0.5rem;
+                margin-bottom: 0.5rem;
+                padding-left: 0.5rem;
+            }
+        }        
     </style>
 </head>
 <body class="d-flex flex-column min-vh-100">
     <!-- 네비게이션 바 -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
         <div class="container">
-            <a class="navbar-brand" href="/">화장품 매장 관리</a>
+            <a class="navbar-brand" href="/">
+                {% if user.is_authenticated and user.store and user.user_type != 'app_admin' %}
+                <div class="navbar-text d-none d-md-block me-3">
+                    <span class="store-badge">
+                        <i class="bi bi-shop me-1"></i> {{ user.store.name }}
+                    </span>
+                </div>
+                {% endif %}
+            </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
@@ -171,7 +198,15 @@
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" 
                                data-bs-toggle="dropdown" aria-expanded="false">
-                                <i class="bi bi-person-circle me-1"></i> {{ user.username }}
+                                {% if user.user_type == 'app_admin' %}
+                                    <i class="bi bi-person-gear me-1"></i> 
+                                {% elif user.user_type == 'store_manager' %}
+                                    <i class="bi bi-person-badge me-1"></i> 
+                                {% elif user.user_type == 'store_staff' %}
+                                    <i class="bi bi-person-workspace me-1"></i> 
+                                {% else %}
+                                    <i class="bi bi-person-circle me-1"></i> 
+                                {% endif %} {{ user.username }}
                             </a>
                             <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
                                 <li><a class="dropdown-item" href="{% url 'accounts:profile' %}">
