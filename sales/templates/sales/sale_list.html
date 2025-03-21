@@ -80,7 +80,7 @@
                     <!-- 앱 관리자만 매장 선택 가능 -->
                     <select name="store" id="store" class="form-select">
                         <option value="">모든 매장</option>
-                        {% for store in request.user.available_stores %}
+                        {% for store in available_stores %}
                             <option value="{{ store.id }}" {% if selected_store == store.id|stringformat:"i" %}selected{% endif %}>
                                 {{ store.name }}
                             </option>
