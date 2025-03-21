@@ -32,10 +32,15 @@ class SaleListView(StoreStaffRequiredMixin, ListView):
                 Q(customer_phone__icontains=search_query)
             )
         
-        # 매장 필터링
-        store_id = self.request.GET.get('store')
-        if store_id:
-            queryset = queryset.filter(store_id=store_id)
+        # 앱 관리자가 아닌 경우 기본적으로 자신의 매장으로 필터링
+        if self.request.user.user_type != 'app_admin':
+            queryset = queryset.filter(store=self.request.user.store)
+        
+        # 매장 필터링 (앱 관리자만 사용 가능)
+        if self.request.user.user_type == 'app_admin':
+            store_id = self.request.GET.get('store')
+            if store_id:
+                queryset = queryset.filter(store_id=store_id)
         
         # 상태 필터링
         status = self.request.GET.get('status')
@@ -56,10 +61,19 @@ class SaleListView(StoreStaffRequiredMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['search_query'] = self.request.GET.get('search', '')
-        context['selected_store'] = self.request.GET.get('store', '')
         context['selected_status'] = self.request.GET.get('status', '')
         context['start_date'] = self.request.GET.get('start_date', '')
         context['end_date'] = self.request.GET.get('end_date', '')
+        
+        # 매장 정보 컨텍스트에 추가
+        if self.request.user.user_type == 'app_admin':
+            context['selected_store'] = self.request.GET.get('store', '')
+            context['is_admin'] = True
+        else:
+            # 일반 사용자는 자신의 매장만 볼 수 있음
+            context['selected_store'] = self.request.user.store.id if self.request.user.store else None
+            context['user_store_name'] = self.request.user.store.name if self.request.user.store else '지정되지 않음'
+            context['is_admin'] = False
         
         # 페이지의 판매 총액 계산
         context['total_sales_amount'] = self.get_queryset().aggregate(
@@ -339,29 +353,52 @@ def sales_dashboard(request):
     start_date = request.GET.get('start_date', (today - timezone.timedelta(days=30)).isoformat())
     end_date = request.GET.get('end_date', today.isoformat())
     
+    # 사용자 권한에 따른 필터링 적용
+    sales_filter = {
+        'sale_date__date__gte': start_date,
+        'sale_date__date__lte': end_date,
+        'status': 'completed'
+    }
+    
+    # 앱 관리자가 아닌 경우 해당 매장 데이터만 표시
+    if request.user.user_type != 'app_admin':
+        sales_filter['store'] = request.user.store
+    
     # 날짜 범위 내 일별 판매액
     daily_sales = Sale.objects.filter(
-        sale_date__date__gte=start_date,
-        sale_date__date__lte=end_date,
-        status='completed'
+        **sales_filter
     ).values('sale_date__date').annotate(
         total=Sum('final_amount')
     ).order_by('sale_date__date')
     
-    # 매장별 판매액
-    store_sales = Sale.objects.filter(
-        sale_date__date__gte=start_date,
-        sale_date__date__lte=end_date,
-        status='completed'
-    ).values('store__name').annotate(
-        total=Sum('final_amount')
-    ).order_by('-total')
+    # 매장별 판매액 (앱 관리자만 다양한 매장 확인 가능)
+    if request.user.user_type == 'app_admin':
+        store_sales = Sale.objects.filter(
+            **sales_filter
+        ).values('store__name').annotate(
+            total=Sum('final_amount')
+        ).order_by('-total')
+    else:
+        # 일반 사용자는 자기 매장만 표시
+        store_sales = Sale.objects.filter(
+            **sales_filter
+        ).values('store__name').annotate(
+            total=Sum('final_amount')
+        )
+    
+    # 상품별 판매량에 매장 필터 적용
+    items_filter = {
+        'sale__sale_date__date__gte': start_date,
+        'sale__sale_date__date__lte': end_date,
+        'sale__status': 'completed'
+    }
+    
+    if request.user.user_type != 'app_admin':
+        items_filter['sale__store'] = request.user.store
     
     # 상품별 판매량
     product_sales = SaleItem.objects.filter(
-        sale__sale_date__date__gte=start_date,
-        sale__sale_date__date__lte=end_date,
-        sale__status='completed'
+        **items_filter
     ).values('product__name').annotate(
         quantity=Sum('quantity'),
         total=Sum('subtotal')
@@ -374,15 +411,13 @@ def sales_dashboard(request):
         'start_date': start_date,
         'end_date': end_date,
         'total_sales': Sale.objects.filter(
-            sale_date__date__gte=start_date,
-            sale_date__date__lte=end_date,
-            status='completed'
+            **sales_filter
         ).aggregate(total=Sum('final_amount'))['total'] or 0,
         'total_sales_count': Sale.objects.filter(
-            sale_date__date__gte=start_date,
-            sale_date__date__lte=end_date,
-            status='completed'
+            **sales_filter
         ).count(),
+        'user_store': request.user.store.name if hasattr(request.user, 'store') and request.user.store else '전체',
+        'is_admin': request.user.user_type == 'app_admin'
     }
     
     return render(request, 'sales/dashboard.html', context)

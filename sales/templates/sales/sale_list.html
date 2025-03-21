@@ -76,14 +76,22 @@
             </div>
             <div class="col-md-2">
                 <label for="store" class="form-label">매장</label>
-                <select name="store" id="store" class="form-select">
-                    <option value="">모든 매장</option>
-                    {% for store in request.user.available_stores %}
-                        <option value="{{ store.id }}" {% if selected_store == store.id|stringformat:"i" %}selected{% endif %}>
-                            {{ store.name }}
-                        </option>
-                    {% endfor %}
-                </select>
+                {% if user.user_type == 'app_admin' %}
+                    <!-- 앱 관리자만 매장 선택 가능 -->
+                    <select name="store" id="store" class="form-select">
+                        <option value="">모든 매장</option>
+                        {% for store in request.user.available_stores %}
+                            <option value="{{ store.id }}" {% if selected_store == store.id|stringformat:"i" %}selected{% endif %}>
+                                {{ store.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                {% else %}
+                    <!-- 일반 사용자는 자신의 매장만 볼 수 있음 (읽기 전용) -->
+                    <input type="text" class="form-control" value="{{ user_store_name }}" readonly>
+                    <!-- 매장 ID를 hidden 필드로 유지 -->
+                    <input type="hidden" name="store" value="{{ selected_store }}">
+                {% endif %}
             </div>
             <div class="col-md-2">
                 <label for="status" class="form-label">상태</label>
