@@ -13,6 +13,7 @@ from accounts.permissions import StoreStaffRequiredMixin, StoreManagerRequiredMi
 from inventory.models import Product, ProductPrice
 from .models import Sale, SaleItem, Payment
 from .forms import SaleForm, SaleItemForm, PaymentFormSet, SaleItemFormSet
+from accounts.models import Store  # Store 모델을 import 해야 합니다
 
 class SaleListView(StoreStaffRequiredMixin, ListView):
     model = Sale
@@ -69,6 +70,8 @@ class SaleListView(StoreStaffRequiredMixin, ListView):
         if self.request.user.user_type == 'app_admin':
             context['selected_store'] = self.request.GET.get('store', '')
             context['is_admin'] = True
+            # 앱 관리자에게는 모든 매장 목록을 제공
+            context['available_stores'] = Store.objects.order_by('name')
         else:
             # 일반 사용자는 자신의 매장만 볼 수 있음
             context['selected_store'] = self.request.user.store.id if self.request.user.store else None
