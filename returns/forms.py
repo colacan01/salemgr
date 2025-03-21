@@ -161,6 +161,8 @@ class ReturnItemInlineFormSet(BaseInlineFormSet):
         """최소 하나 이상의 반품 항목이 있는지 확인"""
         super().clean()
         
+        print("[Debug]:::: ", self.errors)
+        
         if any(self.errors):
             return
             

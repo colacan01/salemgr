@@ -104,7 +104,6 @@ class ReturnDetailView(StoreStaffRequiredMixin, DetailView):
         
         return context
 
-
 class ReturnCreateView(StoreStaffRequiredMixin, CreateView):
     """새로운 반품 등록"""
     model = Return
@@ -248,8 +247,6 @@ class ReturnCreateView(StoreStaffRequiredMixin, CreateView):
             print(traceback.format_exc())
             return self.form_invalid(form)
         
-# 이전 코드 이어서...
-
 class ReturnUpdateView(StoreStaffRequiredMixin, UpdateView):
     """반품 정보 수정"""
     model = Return
@@ -284,85 +281,8 @@ class ReturnUpdateView(StoreStaffRequiredMixin, UpdateView):
             if self.object.sale:
                 context['sale_items'] = self.object.sale.saleitems.all()
         
-        return context
+        return context    
     
-    # def form_valid(self, form):
-    #     # 이미 처리된 반품은 수정 불가
-    #     if self.object.status != 'pending':
-    #         messages.error(self.request, '이미 처리된 반품은 수정할 수 없습니다.')
-    #         return redirect('returns:return_detail', pk=self.object.pk)
-        
-    #     context = self.get_context_data()
-    #     item_formset = context['item_formset']
-        
-    #     # 폼셋 유효성 검사
-    #     if not item_formset.is_valid():
-    #         return self.form_invalid(form)
-        
-    #     try:
-    #         with transaction.atomic():
-    #             # 반품 객체 업데이트
-    #             self.object = form.save()
-                
-    #             # 폼셋 저장
-    #             item_formset.instance = self.object
-    #             items = item_formset.save(commit=False)
-                
-    #             # 각 항목 업데이트
-    #             for item in items:
-    #                 # 안전하게 sale_item 속성과 값 확인
-    #                 try:
-    #                     if hasattr(item, 'sale_item') and item.sale_item is not None:
-    #                         # 판매 항목이 있는 경우
-    #                         if not item.product_id:
-    #                             item.product = item.sale_item.product
-    #                         if not item.price or item.price == 0:
-    #                             item.price = item.sale_item.price
-    #                 except (ValueError, AttributeError):
-    #                     # sale_item이 없거나 접근 불가한 경우
-    #                     pass
-                    
-    #                 # sale_item이 없는 경우 POST 데이터에서 product ID 추출
-    #                 if not item.product_id:
-    #                     item_index = None
-    #                     for i, form in enumerate(item_formset.forms):
-    #                         if form.instance == item:
-    #                             item_index = i
-    #                             break
-                        
-    #                     if item_index is not None:
-    #                         product_id = self.request.POST.get(f'{item_formset.prefix}-{item_index}-product')
-    #                         if product_id:
-    #                             try:
-    #                                 from inventory.models import Product
-    #                                 item.product = Product.objects.get(id=product_id)
-    #                             except (Product.DoesNotExist, ValueError):
-    #                                 pass
-                    
-    #                 # 환불 금액이 설정되지 않았으면 수량 * 가격으로 계산
-    #                 if not item.refund_amount or item.refund_amount == 0:
-    #                     item.refund_amount = item.price * item.quantity
-                    
-    #                 item.save()
-                
-    #             # 삭제된 항목 처리
-    #             for obj in item_formset.deleted_objects:
-    #                 obj.delete()
-                
-    #             # 총 환불 금액 재계산
-    #             total_amount = sum(item.refund_amount for item in self.object.returnitems.all())
-    #             self.object.total_amount = total_amount
-    #             self.object.save(update_fields=['total_amount'])
-                
-    #             messages.success(self.request, f'반품번호 {self.object.return_number}가 성공적으로 수정되었습니다.')
-    #             return redirect('returns:return_detail', pk=self.object.pk)
-        
-    #     except Exception as e:
-    #         messages.error(self.request, f'반품 수정 중 오류가 발생했습니다: {str(e)}')
-    #         # 디버깅을 위한 예외 정보 출력
-    #         import traceback
-    #         print(traceback.format_exc())
-    #         return self.form_invalid(form)
     def form_valid(self, form):
         context = self.get_context_data()
         item_formset = context['item_formset']

@@ -125,10 +125,10 @@ class ReturnCompleteView(StoreStaffRequiredMixin, View):
                         product=item.product,
                         store=return_obj.store,
                         quantity=item.quantity,
-                        unit_price=item.price,
+                        cost_price=item.price,
                         receipt_date=timezone.now(),
-                        receipt_type='return',
-                        notes=f'반품번호 {return_obj.return_number} 재입고',
+                        receipt_number=return_obj.return_number,            
+                        note=f'반품번호 {return_obj.return_number} 재입고',
                         created_by=request.user
                     )
                     

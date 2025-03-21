@@ -61,11 +61,17 @@ class Return(models.Model):
         if not self.customer_phone and self.sale and self.sale.customer_phone:
             self.customer_phone = self.sale.customer_phone
             
-        # 환불 금액 자동 계산
-        if not self.total_amount:
-            self.total_amount = sum(item.refund_amount for item in self.returnitems.all())
-            
+        # 먼저 모델 저장
         super().save(*args, **kwargs)
+        
+        # 환불 금액 자동 계산 (모델 저장 후 계산)
+        if self.pk:  # 모델이 데이터베이스에 저장된 경우에만
+            calculated_total = sum(item.refund_amount for item in self.returnitems.all())
+            if self.total_amount != calculated_total:
+                # 총액이 다를 경우에만 업데이트 (무한 재귀 방지)
+                Return.objects.filter(pk=self.pk).update(total_amount=calculated_total)
+                # 메모리상의 객체도 업데이트
+                self.total_amount = calculated_total
     
     def get_item_count(self):
         """반품에 포함된 총 상품 종류 수"""
