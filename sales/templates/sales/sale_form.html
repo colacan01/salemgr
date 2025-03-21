@@ -322,6 +322,26 @@
     document.addEventListener('DOMContentLoaded', function() {
         // 초기화
         updateTotals();
+
+        // 기존 상품 선택 필드에 이벤트 리스너 추가
+        document.querySelectorAll('.item-row select[name$="-product"]').forEach(select => {
+            select.addEventListener('change', function() {
+                const productId = this.value;
+                if (productId) {
+                    const row = this.closest('.item-row');
+                    fetch(`/sales/api/product-info/?product_id=${productId}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.price) {
+                                row.querySelector('[name$="-price"]').value = data.price;
+                                updateRowSubtotal(row);
+                                updateTotals();
+                            }
+                        })
+                        .catch(error => console.error('상품 정보 조회 실패:', error));
+                }
+            });
+        });
         
         // 폼셋 관리를 위한 변수들
         const itemTable = document.getElementById('itemTableBody');
@@ -442,7 +462,7 @@
             });
             
             // 상품 선택 시 가격 자동 설정
-            newRow.querySelector('select').addEventListener('change', function() {
+            {% comment %} newRow.querySelector('select').addEventListener('change', function() {
                 const productId = this.value;
                 if (productId) {
                     fetch(`/sales/api/product-info/?product_id=${productId}`)
@@ -455,8 +475,24 @@
                             }
                         });
                 }
-            });
+            }); {% endcomment %}
             
+            newRow.querySelector('select').addEventListener('change', function() {
+                const productId = this.value;
+                if (productId) {
+                    fetch(`/sales/api/product-info/?product_id=${productId}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.price) {
+                                newRow.querySelector('[name$="-price"]').value = data.price;
+                                updateRowSubtotal(newRow);
+                                updateTotals();
+                            }
+                        })
+                        .catch(error => console.error('상품 정보 조회 실패:', error));
+                }
+            });
+
             // 폼셋 카운트 업데이트
             itemFormCount += 1;
             document.querySelector(`#${itemFormPrefix}-TOTAL_FORMS`).value = itemFormCount;
