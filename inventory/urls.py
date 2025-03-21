@@ -47,4 +47,6 @@ urlpatterns = [
     
     # AJAX 요청용 URL
     path('api/product-stock/', views.get_product_stock, name='api_product_stock'),
+    # 기존 URL 패턴에 추가
+    path('api/last-cost-price/', views.get_last_cost_price, name='api_last_cost_price'),
 ]

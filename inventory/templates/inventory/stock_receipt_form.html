@@ -232,19 +232,51 @@
             storeSelect.parentNode.appendChild(hiddenInput);
         }
         
+        // 상품 선택 시 마지막 입고 가격 조회 및 설정
+        const productSelect = document.getElementById('{{ form.product.id_for_label }}');
+        const costPriceInput = document.getElementById('{{ form.cost_price.id_for_label }}');
+        
+        productSelect.addEventListener('change', function() {
+            const productId = this.value;
+            if (!productId) return;
+            
+            // 마지막 입고 가격 API 호출
+            fetch(`/inventory/api/last-cost-price/?product_id=${productId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.cost_price) {
+                        costPriceInput.value = data.cost_price;
+                        
+                        // 마지막 입고 일자 정보 표시 (선택 사항)
+                        if (data.last_receipt_date) {
+                            const infoSpan = document.createElement('small');
+                            infoSpan.className = 'text-info d-block last-price-info';
+                            infoSpan.textContent = `마지막 입고: ${data.last_receipt_date}, 가격: ${data.cost_price.toLocaleString()}원`;
+                            
+                            // 이전 정보 삭제 후 새 정보 추가
+                            const existingInfo = costPriceInput.parentNode.parentNode.querySelector('.last-price-info');
+                            if (existingInfo) existingInfo.remove();
+                            costPriceInput.parentNode.parentNode.appendChild(infoSpan);
+                        }
+                    }
+                })
+                .catch(error => console.error('가격 정보 조회 중 오류 발생:', error));
+        });
+        
         // URL에서 product 파라미터 값을 읽어와 상품 선택
         const urlParams = new URLSearchParams(window.location.search);
         const productId = urlParams.get('product');
         if (productId) {
-            const productSelect = document.getElementById('{{ form.product.id_for_label }}');
             for (let i = 0; i < productSelect.options.length; i++) {
                 if (productSelect.options[i].value === productId) {
                     productSelect.options[i].selected = true;
+                    // 상품이 URL 파라미터로 선택된 경우 change 이벤트 발생시켜 가격 조회
+                    productSelect.dispatchEvent(new Event('change'));
+                    // 상품이 선택되면 포커스를 수량 필드로 이동
+                    document.getElementById('{{ form.quantity.id_for_label }}').focus();
                     break;
                 }
             }
-            // 상품이 선택되면 포커스를 수량 필드로 이동
-            document.getElementById('{{ form.quantity.id_for_label }}').focus();
         }
 
         // 폼 제출 시 필드 유효성 검사

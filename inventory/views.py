@@ -1078,3 +1078,23 @@ def get_product_stock(request):
             return JsonResponse(result)
     except ProductStock.DoesNotExist:
         return JsonResponse({'quantity': 0})
+
+def get_last_cost_price(request):
+    """상품의 마지막 입고 가격 조회 API"""
+    product_id = request.GET.get('product_id')
+    
+    if not product_id:
+        return JsonResponse({'error': '상품 ID가 필요합니다.'}, status=400)
+    
+    # 해당 상품의 마지막 입고 정보 조회
+    last_receipt = StockReceipt.objects.filter(
+        product_id=product_id
+    ).order_by('-receipt_date', '-created_at').first()
+    
+    if last_receipt:
+        return JsonResponse({
+            'cost_price': float(last_receipt.cost_price),
+            'last_receipt_date': last_receipt.receipt_date.strftime('%Y-%m-%d') if last_receipt.receipt_date else None
+        })
+    else:
+        return JsonResponse({'cost_price': None, 'last_receipt_date': None})
