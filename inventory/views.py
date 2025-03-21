@@ -9,13 +9,14 @@ from django.http import JsonResponse
 
 from accounts.permissions import StoreStaffRequiredMixin, StoreManagerRequiredMixin
 from .models import (
-    Category, Product, ProductPrice, ProductStock,
+    Category, Product, ProductPrice, ProductStock, 
     StockReceipt, StockRelease, StockAdjustment
 )
 from .forms import (
     CategoryForm, ProductForm, ProductPriceForm, 
     StockReceiptForm, StockReleaseForm, StockAdjustmentForm
 )
+from accounts.models import Store
 
 # 카테고리 관리
 class CategoryListView(StoreStaffRequiredMixin, ListView):
@@ -1001,50 +1002,80 @@ class StockAdjustmentUpdateView(StoreStaffRequiredMixin, UpdateView):
         return context
 
 # 재고 현황
-class StockStatusView(StoreStaffRequiredMixin, ListView):
+class StockStatusView(ListView):
     model = ProductStock
     template_name = 'inventory/stock_status.html'
     context_object_name = 'stocks'
     paginate_by = 20
-    
+
     def get_queryset(self):
         queryset = super().get_queryset()
-        search_query = self.request.GET.get('search', '')
-        store_id = self.request.GET.get('store', '')
-        category_id = self.request.GET.get('category', '')
-        stock_filter = self.request.GET.get('stock_filter', '')
         
+        # 검색 필터링
+        search_query = self.request.GET.get('search', '')
         if search_query:
             queryset = queryset.filter(
                 Q(product__name__icontains=search_query) |
                 Q(product__code__icontains=search_query) |
                 Q(product__barcode__icontains=search_query)
             )
-        
-        if store_id:
-            queryset = queryset.filter(store_id=store_id)
             
+        # 사용자 권한에 따른 매장 필터링
+        if self.request.user.user_type == 'app_admin':
+            # 앱 관리자는 매장 선택 가능
+            store_id = self.request.GET.get('store')
+            if store_id:
+                queryset = queryset.filter(store_id=store_id)
+        else:
+            # 일반 사용자는 자신의 매장만 볼 수 있음
+            queryset = queryset.filter(store=self.request.user.store)
+        
+        # 카테고리 필터링
+        category_id = self.request.GET.get('category')
         if category_id:
             queryset = queryset.filter(product__category_id=category_id)
             
+        # 재고 상태 필터링
+        stock_filter = self.request.GET.get('stock_filter')
         if stock_filter == 'low':
-            # 재고가 부족한 상품 (10개 미만)
-            queryset = queryset.filter(quantity__lt=10)
+            queryset = queryset.filter(quantity__lt=10, quantity__gt=0)
         elif stock_filter == 'out':
-            # 품절된 상품
             queryset = queryset.filter(quantity__lte=0)
             
-        return queryset.select_related('product', 'store')
-    
+        return queryset.select_related('product', 'store', 'product__category')
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        from accounts.models import Store
-        context['stores'] = Store.objects.all()
-        context['categories'] = Category.objects.all()
+        
+        # 검색 및 필터 관련 컨텍스트
         context['search_query'] = self.request.GET.get('search', '')
-        context['selected_store'] = self.request.GET.get('store', '')
         context['selected_category'] = self.request.GET.get('category', '')
         context['selected_stock_filter'] = self.request.GET.get('stock_filter', '')
+        
+        # 매장 관련 컨텍스트
+        if self.request.user.user_type == 'app_admin':
+            context['selected_store'] = self.request.GET.get('store', '')
+            # 앱 관리자는 모든 매장 목록 제공
+            # context['stores'] = Store.objects.filter(is_active=True).order_by('name')
+            context['stores'] = Store.objects.order_by('name')
+        else:
+            # 일반 사용자는 자신의 매장 정보만 제공
+            context['user_store_id'] = self.request.user.store.id if self.request.user.store else None
+            context['user_store_name'] = self.request.user.store.name if self.request.user.store else '지정되지 않음'
+        
+        # 카테고리 목록
+        context['categories'] = Category.objects.all().order_by('name')
+        
+        # 재고 통계
+        all_stocks = ProductStock.objects.all()
+        
+        # 사용자 권한에 따른 필터링
+        if self.request.user.user_type != 'app_admin':
+            all_stocks = all_stocks.filter(store=self.request.user.store)
+            
+        # 부족 재고 및 품절 상품 수 계산
+        context['low_stock_count'] = all_stocks.filter(quantity__lt=10, quantity__gt=0).count()
+        context['out_of_stock_count'] = all_stocks.filter(quantity__lte=0).count()
         
         return context
 
