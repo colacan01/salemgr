@@ -168,7 +168,8 @@ class SaleCreateView(StoreStaffRequiredMixin, CreateView):
                 if item_form.is_valid() and item_form.cleaned_data and not item_form.cleaned_data.get('DELETE', False):
                     item = item_form.save(commit=False)
                     # 소계 계산
-                    item.subtotal = (item.price * Decimal(item.quantity)) - item.discount
+                    # item.subtotal = (item.price * Decimal(item.quantity)) - item.discount
+                    item.subtotal = (item.price * Decimal(item.quantity))
                     total_amount += item.subtotal
             
             self.object.total_amount = total_amount
@@ -258,7 +259,7 @@ class SaleUpdateView(StoreManagerRequiredMixin, UpdateView):
                 if item_form.is_valid() and item_form.cleaned_data and not item_form.cleaned_data.get('DELETE', False):
                     item = item_form.save(commit=False)
                     # 소계 계산
-                    item.subtotal = (item.price * Decimal(item.quantity)) - item.discount
+                    item.subtotal = (item.price * Decimal(item.quantity))
                     item.sale = self.object
                     item.save()
                     total_amount += item.subtotal

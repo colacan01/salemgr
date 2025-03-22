@@ -320,8 +320,76 @@
 {% block extra_js %}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+        // 폼셋 관리를 위한 변수들을 가장 먼저 선언 - 접두사 수정
+        const itemFormPrefix = '{{ item_formset.prefix }}';  // 'id_' 접두사 제거
+        const paymentFormPrefix = '{{ payment_formset.prefix }}';
+        let itemFormCount = {{ item_formset.total_form_count }};
+        let paymentFormCount = {{ payment_formset.total_form_count }};
+        
+        const itemTable = document.getElementById('itemTableBody');
+        const paymentTable = document.getElementById('paymentTableBody');
+        
+        // 초기 상태 로깅 (변수 선언 후)
+        console.log('초기 폼셋 상태:');
+        console.log('itemFormPrefix:', itemFormPrefix);
+        console.log('itemFormCount:', itemFormCount);
+        
+        // 관리 폼 요소의 ID를 정확하게 구성
+        const itemFormTotalFormsId = `id_${itemFormPrefix}-TOTAL_FORMS`;
+        console.log('itemFormTotalFormsId:', itemFormTotalFormsId);
+        console.log('TOTAL_FORMS 값:', document.querySelector(`#${itemFormTotalFormsId}`)?.value);
+        console.log('item-row 요소 수:', document.querySelectorAll('.item-row').length);
+        
+        // 폼셋 관리를 위한 변수들을 정확히 설정
+        const initialItemFormCount = document.querySelectorAll('.item-row').length;
+        
+        // 초기 행 수와 TOTAL_FORMS 값 불일치시 수정
+        const totalFormsInput = document.querySelector(`#${itemFormTotalFormsId}`);
+        if (totalFormsInput && parseInt(totalFormsInput.value) !== initialItemFormCount) {
+            console.log(`초기 TOTAL_FORMS 수정: ${totalFormsInput.value} → ${initialItemFormCount}`);
+            totalFormsInput.value = initialItemFormCount;
+            itemFormCount = initialItemFormCount;
+        }
+        
+        // 디버깅 - 폼셋 관리 요소 확인
+        console.log('Management form 요소 존재 여부:', !!document.querySelector(`#${itemFormTotalFormsId}`));
+        
+        // 만약 요소가 없다면, 다른 요소를 동적으로 추가
+        if (!document.querySelector(`#${itemFormTotalFormsId}`)) {
+            console.log('폼셋 관리 폼을 찾을 수 없습니다. 동적으로 생성합니다.');
+            const managementForm = document.createElement('div');
+            managementForm.innerHTML = `
+                <input type="hidden" name="${itemFormPrefix}-TOTAL_FORMS" value="${itemFormCount}" id="${itemFormTotalFormsId}">
+                <input type="hidden" name="${itemFormPrefix}-INITIAL_FORMS" value="0" id="id_${itemFormPrefix}-INITIAL_FORMS">
+                <input type="hidden" name="${itemFormPrefix}-MIN_NUM_FORMS" value="0" id="id_${itemFormPrefix}-MIN_NUM_FORMS">
+                <input type="hidden" name="${itemFormPrefix}-MAX_NUM_FORMS" value="1000" id="id_${itemFormPrefix}-MAX_NUM_FORMS">
+            `;
+            document.getElementById('itemTable').prepend(managementForm);
+        }
+        
         // 초기화
+        
+        // 기존 상품 행의 소계 초기화
+        document.querySelectorAll('.item-row').forEach(row => {
+            updateRowSubtotal(row);
+        });
+        
         updateTotals();
+        
+        // 폼셋 관리 폼 확인 및 초기화 (updateItemFormCount로 대체)
+        updateItemFormCount();
+        
+        // 기존 결제 유형 선택 필드에 이벤트 리스너 추가
+        document.querySelectorAll('.payment-row select[name$="-payment_type"]').forEach(select => {
+            select.addEventListener('change', function() {
+                const row = this.closest('.payment-row');
+                const amountInput = row.querySelector('[name$="-amount"]');
+                if (amountInput && amountInput.value == 0) {
+                    const finalAmount = getFinalAmount();
+                    amountInput.value = finalAmount;
+                }
+            });
+        });
 
         // 기존 상품 선택 필드에 이벤트 리스너 추가
         document.querySelectorAll('.item-row select[name$="-product"]').forEach(select => {
@@ -343,14 +411,6 @@
             });
         });
         
-        // 폼셋 관리를 위한 변수들
-        const itemTable = document.getElementById('itemTableBody');
-        const paymentTable = document.getElementById('paymentTableBody');
-        const itemFormPrefix = '{{ item_formset.prefix }}';
-        const paymentFormPrefix = '{{ payment_formset.prefix }}';
-        let itemFormCount = {{ item_formset.total_form_count }};
-        let paymentFormCount = {{ payment_formset.total_form_count }};
-
         // 상품 추가 버튼 클릭 이벤트
         document.getElementById('addItemBtn').addEventListener('click', function() {
             addItemRow();
@@ -398,7 +458,37 @@
 
         // 할인 금액 변경 시 합계 업데이트
         document.querySelector('[name="discount_amount"]').addEventListener('change', function() {
+            // 사용자가 수정한 값 읽기
+            const userDiscount = parseFloat(this.value) || 0;
+            
+            // 상품별 할인 합계 계산
+            let totalItemDiscount = 0;
+            document.querySelectorAll('.item-row').forEach(row => {
+                if (row.style.display !== 'none') {
+                    const discount = parseFloat(row.querySelector('[name$="-discount"]').value) || 0;
+                    totalItemDiscount += discount;
+                }
+            });
+            
+            // 상품별 할인 합계와 사용자 입력이 다르면 상품별 할인 합계로 덮어쓰기
+            if (userDiscount !== totalItemDiscount) {
+                this.value = totalItemDiscount;
+                alert('할인 금액은 상품별 할인 합계로 자동 계산됩니다.');
+            }
+            
             updateTotals();
+        });
+
+        // 결제 유형 선택 시 금액 자동 설정
+        document.querySelectorAll('.payment-row select[name$="-payment_type"]').forEach(select => {
+            select.addEventListener('change', function() {
+                const row = this.closest('.payment-row');
+                const amountInput = row.querySelector('[name$="-amount"]');
+                if (amountInput && amountInput.value == 0) {
+                    const finalAmount = getFinalAmount();
+                    amountInput.value = finalAmount;
+                }
+            });
         });
 
         // 상품 추가 행 함수
@@ -417,22 +507,22 @@
             // 템플릿 내 select 엘리먼트에 옵션 추가
             const template = `
                 <td>
-                    <select name="${itemFormPrefix}-${itemFormCount}-product" id="${itemFormPrefix}-${itemFormCount}-product" class="form-select">
+                    <select name="${itemFormPrefix}-${itemFormCount}-product" id="id_${itemFormPrefix}-${itemFormCount}-product" class="form-select">
                         ${productOptions}
                     </select>
                 </td>
                 <td>
                     <div class="input-group input-group-sm">
-                        <input type="number" name="${itemFormPrefix}-${itemFormCount}-price" id="${itemFormPrefix}-${itemFormCount}-price" class="form-control" value="0" min="0">
+                        <input type="number" name="${itemFormPrefix}-${itemFormCount}-price" id="id_${itemFormPrefix}-${itemFormCount}-price" class="form-control" value="0" min="0">
                         <span class="input-group-text">원</span>
                     </div>
                 </td>
                 <td>
-                    <input type="number" name="${itemFormPrefix}-${itemFormCount}-quantity" id="${itemFormPrefix}-${itemFormCount}-quantity" class="form-control form-control-sm" value="1" min="1">
+                    <input type="number" name="${itemFormPrefix}-${itemFormCount}-quantity" id="id_${itemFormPrefix}-${itemFormCount}-quantity" class="form-control form-control-sm" value="1" min="1">
                 </td>
                 <td>
                     <div class="input-group input-group-sm">
-                        <input type="number" name="${itemFormPrefix}-${itemFormCount}-discount" id="${itemFormPrefix}-${itemFormCount}-discount" class="form-control" value="0" min="0">
+                        <input type="number" name="${itemFormPrefix}-${itemFormCount}-discount" id="id_${itemFormPrefix}-${itemFormCount}-discount" class="form-control" value="0" min="0">
                         <span class="input-group-text">원</span>
                     </div>
                 </td>
@@ -462,21 +552,6 @@
             });
             
             // 상품 선택 시 가격 자동 설정
-            {% comment %} newRow.querySelector('select').addEventListener('change', function() {
-                const productId = this.value;
-                if (productId) {
-                    fetch(`/sales/api/product-info/?product_id=${productId}`)
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data.price) {
-                                newRow.querySelector('[name$="-price"]').value = data.price;
-                                updateRowSubtotal(newRow);
-                                updateTotals();
-                            }
-                        });
-                }
-            }); {% endcomment %}
-            
             newRow.querySelector('select').addEventListener('change', function() {
                 const productId = this.value;
                 if (productId) {
@@ -493,9 +568,18 @@
                 }
             });
 
-            // 폼셋 카운트 업데이트
+            // 폼셋 카운트 업데이트 (안전한 방식으로 수정)
             itemFormCount += 1;
-            document.querySelector(`#${itemFormPrefix}-TOTAL_FORMS`).value = itemFormCount;
+            const totalFormsInput = document.querySelector(`#${itemFormTotalFormsId}`);
+            if (totalFormsInput) {
+                totalFormsInput.value = itemFormCount;
+            } else {
+                console.error(`요소를 찾을 수 없음: #${itemFormTotalFormsId}`);
+                alert('폼셋 관리 폼이 제대로 로드되지 않았습니다. 페이지를 새로고침하세요.');
+            }
+            
+            // 카운트 업데이트 후 전체 확인
+            updateItemFormCount();
         }
 
         // 결제 추가 행 함수
@@ -503,9 +587,11 @@
             const newRow = document.createElement('tr');
             newRow.className = 'payment-row';
             
+            const paymentFormTotalFormsId = `id_${paymentFormPrefix}-TOTAL_FORMS`;
+            
             const template = `
                 <td style="width: 25%;">
-                    <select name="${paymentFormPrefix}-${paymentFormCount}-payment_type" id="${paymentFormPrefix}-${paymentFormCount}-payment_type" class="form-select">
+                    <select name="${paymentFormPrefix}-${paymentFormCount}-payment_type" id="id_${paymentFormPrefix}-${paymentFormCount}-payment_type" class="form-select">
                         <option value="cash">현금</option>
                         <option value="card" selected>신용카드</option>
                         <option value="card_installment">카드 할부</option>
@@ -518,12 +604,12 @@
                 </td>
                 <td style="width: 25%;">
                     <div class="input-group">
-                        <input type="number" name="${paymentFormPrefix}-${paymentFormCount}-amount" id="${paymentFormPrefix}-${paymentFormCount}-amount" class="form-control" value="0" min="0">
+                        <input type="number" name="${paymentFormPrefix}-${paymentFormCount}-amount" id="id_${paymentFormPrefix}-${paymentFormCount}-amount" class="form-control" value="0" min="0">
                         <span class="input-group-text">원</span>
                     </div>
                 </td>
                 <td>
-                    <input type="text" name="${paymentFormPrefix}-${paymentFormCount}-payment_details" id="${paymentFormPrefix}-${paymentFormCount}-payment_details" class="form-control" placeholder="결제 세부 정보">
+                    <input type="text" name="${paymentFormPrefix}-${paymentFormCount}-payment_details" id="id_${paymentFormPrefix}-${paymentFormCount}-payment_details" class="form-control" placeholder="결제 세부 정보">
                 </td>
                 <td>
                     <button type="button" class="btn btn-sm btn-outline-danger remove-payment">
@@ -540,9 +626,26 @@
                 removePaymentRow(this);
             });
             
+            // 결제 유형 선택 시 금액 자동 설정 이벤트 추가
+            const select = newRow.querySelector('select[name$="-payment_type"]');
+            select.addEventListener('change', function() {
+                const amountInput = newRow.querySelector('[name$="-amount"]');
+                if (amountInput && amountInput.value == 0) {
+                    const finalAmount = getFinalAmount();
+                    amountInput.value = finalAmount;
+                }
+            });
+            
+            // 새로 추가된 행에 현재 최종 결제액을 초기 값으로 설정
+            const amountInput = newRow.querySelector('[name$="-amount"]');
+            if (amountInput) {
+                const finalAmount = getFinalAmount();
+                amountInput.value = finalAmount;
+            }
+            
             // 폼셋 카운트 업데이트
             paymentFormCount += 1;
-            document.querySelector(`#${paymentFormPrefix}-TOTAL_FORMS`).value = paymentFormCount;
+            document.querySelector(`#${paymentFormTotalFormsId}`).value = paymentFormCount;
         }
 
         // 상품 행 제거 함수
@@ -559,7 +662,36 @@
                 row.remove();
             }
             
+            // 표시되는 항목 수 다시 계산하여 TOTAL_FORMS 업데이트
+            updateItemFormCount();
             updateTotals();
+        }
+
+        // 아이템 폼 카운트 업데이트 함수 수정
+        function updateItemFormCount() {
+            // 실제 폼 수(삭제 표시된 행 포함)를 정확하게 계산
+            const totalRows = document.querySelectorAll('.item-row').length;
+            const deletedRows = Array.from(document.querySelectorAll('.item-row input[name$="-DELETE"]:checked')).length;
+            
+            // Django는 폼이 제출될 때 TOTAL_FORMS에 모든 행(삭제된 항목 포함)을 포함해야 함
+            const totalFormsInput = document.querySelector(`#${itemFormTotalFormsId}`);
+            if (totalFormsInput) {
+                console.log(`폼 카운트 업데이트: totalRows=${totalRows}`);
+                totalFormsInput.value = totalRows;
+                itemFormCount = totalRows;
+            } else {
+                console.error(`요소를 찾을 수 없음: #${itemFormTotalFormsId}`);
+                
+                // 폼셋 관리 폼 요소가 없으면 동적으로 추가
+                const managementForm = document.createElement('div');
+                managementForm.innerHTML = `
+                    <input type="hidden" name="${itemFormPrefix}-TOTAL_FORMS" value="${totalRows}" id="id_${itemFormPrefix}-TOTAL_FORMS">
+                    <input type="hidden" name="${itemFormPrefix}-INITIAL_FORMS" value="0" id="id_${itemFormPrefix}-INITIAL_FORMS">
+                    <input type="hidden" name="${itemFormPrefix}-MIN_NUM_FORMS" value="0" id="id_${itemFormPrefix}-MIN_NUM_FORMS">
+                    <input type="hidden" name="${itemFormPrefix}-MAX_NUM_FORMS" value="1000" id="id_${itemFormPrefix}-MAX_NUM_FORMS">
+                `;
+                document.getElementById('itemTable').prepend(managementForm);
+            }
         }
 
         // 결제 행 제거 함수
@@ -583,6 +715,7 @@
             const quantity = parseInt(row.querySelector('[name$="-quantity"]').value) || 0;
             const discount = parseFloat(row.querySelector('[name$="-discount"]').value) || 0;
             
+            // 소계 = (가격 * 수량) - 할인
             const subtotal = (price * quantity) - discount;
             row.querySelector('.subtotal').textContent = subtotal.toLocaleString();
         }
@@ -590,20 +723,37 @@
         // 전체 금액 업데이트 함수
         function updateTotals() {
             let total = 0;
+            let totalItemDiscount = 0;
             
             document.querySelectorAll('.item-row').forEach(row => {
                 if (row.style.display !== 'none') {
-                    const subtotal = parseFloat(row.querySelector('.subtotal').textContent.replace(/,/g, '')) || 0;
-                    total += subtotal;
+                    // 각 행의 소계 계산
+                    const price = parseFloat(row.querySelector('[name$="-price"]').value) || 0;
+                    const quantity = parseInt(row.querySelector('[name$="-quantity"]').value) || 0;
+                    const discount = parseFloat(row.querySelector('[name$="-discount"]').value) || 0;
+                    
+                    const rowTotal = price * quantity;
+                    total += rowTotal;
+                    totalItemDiscount += discount;
                 }
             });
             
-            const discount = parseFloat(document.querySelector('[name="discount_amount"]').value) || 0;
-            const final = total - discount;
+            // 기존 할인 금액 입력란에 상품별 할인금액 합계 반영
+            const discountInput = document.querySelector('[name="discount_amount"]');
+            discountInput.value = totalItemDiscount;
+            
+            const final = total - totalItemDiscount;
             
             document.getElementById('totalAmount').textContent = total.toLocaleString() + '원';
-            document.getElementById('discountAmount').textContent = discount.toLocaleString() + '원';
+            document.getElementById('discountAmount').textContent = totalItemDiscount.toLocaleString() + '원';
             document.getElementById('finalAmount').textContent = final.toLocaleString() + '원';
+        }
+
+        // 최종 결제액 가져오기 함수
+        function getFinalAmount() {
+            const finalAmountText = document.getElementById('finalAmount').textContent;
+            // '12,345원' 형식에서 숫자만 추출
+            return parseInt(finalAmountText.replace(/,/g, '').replace(/원$/, '')) || 0;
         }
 
         // 상품 검색 함수
@@ -695,38 +845,106 @@
             updateTotals();
         }
 
-        // 폼 제출 전 유효성 검사
-        document.getElementById('saleForm').addEventListener('submit', function(e) {
-            // 상품이 한 개 이상 있는지 확인
-            let hasItems = false;
-            document.querySelectorAll('.item-row').forEach(row => {
-                if (row.style.display !== 'none' && row.querySelector('select').value) {
-                    hasItems = true;
+        // 총 결제 금액 계산 함수
+        function getTotalPaymentAmount() {
+            let totalPayment = 0;
+            document.querySelectorAll('.payment-row').forEach(row => {
+                if (row.style.display !== 'none') {
+                    const amount = parseFloat(row.querySelector('[name$="-amount"]').value) || 0;
+                    totalPayment += amount;
+                }
+            });
+            return totalPayment;
+        }
+
+        // 필수 입력 필드 검증 함수
+        function validateRequiredFields() {
+            // 필수 필드 목록
+            const requiredFields = [
+                { name: 'store', label: '판매 매장' },
+                { name: 'sale_date', label: '판매 일시' },
+                { name: 'payment_method', label: '결제 방식' }
+            ];
+            
+            let isValid = true;
+            let errorMsg = '';
+            
+            requiredFields.forEach(field => {
+                const input = document.querySelector(`[name="${field.name}"]`);
+                if (!input || !input.value.trim()) {
+                    isValid = false;
+                    errorMsg += `${field.label}을(를) 입력해주세요.\n`;
                 }
             });
             
-            if (!hasItems) {
+            if (!isValid) {
+                alert(errorMsg);
+            }
+            
+            return isValid;
+        }
+
+        // 폼 제출 전 유효성 검사 - TOTAL_FORMS 확인 부분 수정
+        document.getElementById('saleForm').addEventListener('submit', function(e) {
+            // 상품 행 폼셋 최종 확인 및 업데이트
+            const totalRows = document.querySelectorAll('.item-row').length;
+            const visibleRows = Array.from(document.querySelectorAll('.item-row')).filter(row => row.style.display !== 'none').length;
+            const totalFormsInput = document.querySelector(`#${itemFormTotalFormsId}`);
+            
+            if (totalFormsInput) {
+                // 현재 폼 개수와 TOTAL_FORMS 값이 일치하지 않으면 업데이트
+                if (parseInt(totalFormsInput.value) !== totalRows) {
+                    console.log(`폼 제출 전 TOTAL_FORMS 수정: ${totalFormsInput.value} → ${totalRows}`);
+                    totalFormsInput.value = totalRows;
+                }
+            }
+            
+            // 표시된 상품 행이 없는 경우 확인
+            let hasVisibleItems = false;
+            document.querySelectorAll('.item-row').forEach(row => {
+                if (row.style.display !== 'none' && row.querySelector('select').value) {
+                    hasVisibleItems = true;
+                }
+            });
+            
+            if (!hasVisibleItems) {
                 e.preventDefault();
                 alert('최소 한 개 이상의 상품을 추가해야 합니다.');
                 return false;
             }
             
-            // 결제 정보가 있는지 확인
-            let hasPayments = false;
-            document.querySelectorAll('.payment-row').forEach(row => {
-                if (row.style.display !== 'none') {
-                    const amount = parseFloat(row.querySelector('[name$="-amount"]').value) || 0;
-                    if (amount > 0) {
-                        hasPayments = true;
-                    }
-                }
-            });
-            
-            if (!hasPayments) {
+            // 필수 입력 필드 검증
+            if (!validateRequiredFields()) {
                 e.preventDefault();
-                alert('결제 정보를 추가해야 합니다.');
                 return false;
             }
+            
+            // 결제 정보 검증
+            const finalAmount = getFinalAmount();
+            const totalPayment = getTotalPaymentAmount();
+            
+            // 결제 금액이 없거나 최종 금액과 일치하지 않을 경우
+            if (totalPayment <= 0) {
+                e.preventDefault();
+                alert('최소 한 개 이상의 결제 정보를 추가해야 합니다.');
+                return false;
+            }
+            
+            // 결제 금액과 최종 금액이 일치하지 않을 경우 (1원 이상 차이가 있으면)
+            if (Math.abs(totalPayment - finalAmount) > 1) {
+                e.preventDefault();
+                alert(`총 결제액(${totalPayment.toLocaleString()}원)이 최종 결제액(${finalAmount.toLocaleString()}원)과 일치하지 않습니다.`);
+                return false;
+            }
+            
+            // 디버깅용 로그 출력 (문제 확인을 위해)
+            console.log('폼 제출 시 TOTAL_FORMS 값:', totalFormsInput.value);
+            console.log('실제 .item-row 요소 수:', document.querySelectorAll('.item-row').length);
+            console.log('표시된(display != none) .item-row 요소 수:', 
+                Array.from(document.querySelectorAll('.item-row')).filter(row => row.style.display !== 'none').length);
+            
+            // 모든 검증 통과
+            return true;
         });
     });
 </script>
