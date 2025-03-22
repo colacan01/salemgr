@@ -190,7 +190,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {% for store in store_sales %}
+                            {% for store in store_sales_table %}
                             <tr>
                                 <td>{{ forloop.counter }}</td>
                                 <td>{{ store.store__name }}</td>
@@ -221,8 +221,12 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+
+        console.log("일별 판매 데이터:", '{{ daily_sales|escapejs }}');
+        console.log("매장별 판매 데이터:", '{{ store_sales|escapejs }}');
+
         // 일별 판매액 차트
-        const dailySalesData = {{ daily_sales|safe }};
+        const dailySalesData = JSON.parse('{{ daily_sales|escapejs }}');
         const labels = dailySalesData.map(item => item.sale_date__date);
         const data = dailySalesData.map(item => item.total);
         
@@ -268,7 +272,7 @@
         });
         
         // 매장별 판매 분포 차트
-        const storeSalesData = {{ store_sales|safe }};
+        const storeSalesData = JSON.parse('{{ store_sales|escapejs }}');
         const storeLabels = storeSalesData.map(item => item.store__name);
         const storeData = storeSalesData.map(item => item.total);
         

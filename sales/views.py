@@ -375,6 +375,14 @@ def sales_dashboard(request):
         total=Sum('final_amount')
     ).order_by('sale_date__date')
     
+    # JSON 직렬화를 위해 데이터 변환
+    daily_sales_json = []
+    for entry in daily_sales:
+        daily_sales_json.append({
+            'sale_date__date': entry['sale_date__date'].strftime('%Y-%m-%d'),
+            'total': float(entry['total']) if entry['total'] else 0
+        })
+    
     # 매장별 판매액 (앱 관리자만 다양한 매장 확인 가능)
     if request.user.user_type == 'app_admin':
         store_sales = Sale.objects.filter(
@@ -382,6 +390,7 @@ def sales_dashboard(request):
         ).values('store__name').annotate(
             total=Sum('final_amount')
         ).order_by('-total')
+        store_sales_table = store_sales
     else:
         # 일반 사용자는 자기 매장만 표시
         store_sales = Sale.objects.filter(
@@ -389,6 +398,16 @@ def sales_dashboard(request):
         ).values('store__name').annotate(
             total=Sum('final_amount')
         )
+        store_sales_table = store_sales
+        
+    
+    # JSON 직렬화를 위해 매장별 판매 데이터 변환
+    store_sales_json = []
+    for entry in store_sales:
+        store_sales_json.append({
+            'store__name': entry['store__name'],
+            'total': float(entry['total']) if entry['total'] else 0
+        })
     
     # 상품별 판매량에 매장 필터 적용
     items_filter = {
@@ -408,15 +427,16 @@ def sales_dashboard(request):
         total=Sum('subtotal')
     ).order_by('-quantity')[:10]
     
+    total_sales = Sale.objects.filter(**sales_filter).aggregate(total=Sum('final_amount'))['total'] or 0
+    
     context = {
-        'daily_sales': list(daily_sales),
-        'store_sales': list(store_sales),
+        'daily_sales': json.dumps(daily_sales_json),
+        'store_sales': json.dumps(store_sales_json),
+        'store_sales_table': list(store_sales_table),
         'product_sales': list(product_sales),
         'start_date': start_date,
         'end_date': end_date,
-        'total_sales': Sale.objects.filter(
-            **sales_filter
-        ).aggregate(total=Sum('final_amount'))['total'] or 0,
+        'total_sales': total_sales,
         'total_sales_count': Sale.objects.filter(
             **sales_filter
         ).count(),
