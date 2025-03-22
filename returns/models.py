@@ -162,22 +162,22 @@ class ReturnItem(models.Model):
         super().save(*args, **kwargs)
 
 
-# 시그널을 사용하여 반품 승인 시 자동 입고 처리
-@receiver(post_save, sender=Return)
-def process_return_stock(sender, instance, **kwargs):
-    """반품 승인 시 재고 자동 처리"""
-    # 승인 상태가 되었을 때만 재고 처리
-    if instance.status == 'approved':
-        for return_item in instance.returnitems.all():
-            # 재입고 설정된 항목만 처리
-            if return_item.restock:
-                # 재고 입고 처리
-                StockReceipt.objects.create(
-                    product=return_item.product,
-                    store=instance.store,
-                    quantity=return_item.quantity,
-                    cost_price=return_item.price,
-                    receipt_date=instance.return_date.date(),
-                    note=f'반품번호: {instance.return_number}에 의한 자동 입고',
-                    created_by=instance.created_by
-                )
+# # 시그널을 사용하여 반품 승인 시 자동 입고 처리
+# @receiver(post_save, sender=Return)
+# def process_return_stock(sender, instance, **kwargs):
+#     """반품 승인 시 재고 자동 처리"""
+#     # 승인 상태가 되었을 때만 재고 처리
+#     if instance.status == 'approved':
+#         for return_item in instance.returnitems.all():
+#             # 재입고 설정된 항목만 처리
+#             if return_item.restock:
+#                 # 재고 입고 처리
+#                 StockReceipt.objects.create(
+#                     product=return_item.product,
+#                     store=instance.store,
+#                     quantity=return_item.quantity,
+#                     cost_price=return_item.price,
+#                     receipt_date=instance.return_date.date(),
+#                     note=f'반품번호: {instance.return_number}에 의한 자동 입고',
+#                     created_by=instance.created_by
+#                 )
