@@ -11,7 +11,7 @@
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb">
                     <li class="breadcrumb-item"><a href="{% url 'inventory:stock_release_list' %}">출고 목록</a></li>
-                    <li class="breadcrumb-item"><a href="{% url 'inventory:stock_release_detail' release.id %}">출고 상세</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'inventory:stock_release_detail' object.id %}">출고 상세</a></li>
                     <li class="breadcrumb-item active">삭제</li>
                 </ol>
             </nav>
@@ -33,39 +33,39 @@
                     <tr>
                         <th style="width: 30%">상품</th>
                         <td>
-                            <a href="{% url 'inventory:product_detail' release.product.id %}">
-                                {{ release.product.name }} ({{ release.product.code }})
+                            <a href="{% url 'inventory:product_detail' object.product.id %}">
+                                {{ object.product.name }} ({{ object.product.code }})
                             </a>
                         </td>
                     </tr>
                     <tr>
                         <th>출고 수량</th>
-                        <td>{{ release.quantity }}개</td>
+                        <td>{{ object.quantity }}개</td>
                     </tr>
                     <tr>
                         <th>출고 유형</th>
-                        <td>{{ release.get_release_type_display }}</td>
+                        <td>{{ object.get_release_type_display }}</td>
                     </tr>
                     <tr>
                         <th>출고 날짜</th>
-                        <td>{{ release.release_date|date:"Y-m-d" }}</td>
+                        <td>{{ object.release_date|date:"Y-m-d" }}</td>
                     </tr>
                     <tr>
                         <th>출고 매장</th>
-                        <td>{{ release.store.name }}</td>
+                        <td>{{ object.store.name }}</td>
                     </tr>
                     <tr>
                         <th>등록자</th>
-                        <td>{{ release.created_by.username|default:"-" }}</td>
+                        <td>{{ object.created_by.username|default:"-" }}</td>
                     </tr>
                     <tr>
                         <th>등록일</th>
-                        <td>{{ release.created_at|date:"Y-m-d H:i" }}</td>
+                        <td>{{ object.created_at|date:"Y-m-d H:i" }}</td>
                     </tr>
-                    {% if release.note %}
+                    {% if object.note %}
                     <tr>
                         <th>비고</th>
-                        <td>{{ release.note|linebreaks }}</td>
+                        <td>{{ object.note|linebreaks }}</td>
                     </tr>
                     {% endif %}
                 </table>
@@ -78,7 +78,7 @@
             <form method="post">
                 {% csrf_token %}
                 <div class="d-flex justify-content-between">
-                    <a href="{% url 'inventory:stock_release_detail' release.id %}" class="btn btn-secondary">
+                    <a href="{% url 'inventory:stock_release_detail' object.id %}" class="btn btn-secondary">
                         취소
                     </a>
                     <button type="submit" class="btn btn-danger">

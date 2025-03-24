@@ -11,7 +11,7 @@
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb">
                     <li class="breadcrumb-item"><a href="{% url 'inventory:stock_adjustment_list' %}">재고 조정 목록</a></li>
-                    <li class="breadcrumb-item"><a href="{% url 'inventory:stock_adjustment_detail' adjustment.id %}">재고 조정 상세</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'inventory:stock_adjustment_detail' object.id %}">재고 조정 상세</a></li>
                     <li class="breadcrumb-item active">삭제</li>
                 </ol>
             </nav>
@@ -33,42 +33,42 @@
                     <tr>
                         <th style="width: 30%">상품</th>
                         <td>
-                            <a href="{% url 'inventory:product_detail' adjustment.product.id %}">
-                                {{ adjustment.product.name }} ({{ adjustment.product.code }})
+                            <a href="{% url 'inventory:product_detail' object.product.id %}">
+                                {{ object.product.name }} ({{ object.product.code }})
                             </a>
                         </td>
                     </tr>
                     <tr>
                         <th>조정 유형</th>
                         <td>
-                            <span class="badge {% if adjustment.adjustment_type == 'increase' %}bg-success{% else %}bg-danger{% endif %}">
-                                {{ adjustment.get_adjustment_type_display }}
+                            <span class="badge {% if object.adjustment_type == 'increase' %}bg-success{% else %}bg-danger{% endif %}">
+                                {{ object.get_adjustment_type_display }}
                             </span>
                         </td>
                     </tr>
                     <tr>
                         <th>조정 수량</th>
-                        <td>{{ adjustment.quantity }}개</td>
+                        <td>{{ object.quantity }}개</td>
                     </tr>
                     <tr>
                         <th>조정 날짜</th>
-                        <td>{{ adjustment.adjustment_date|date:"Y-m-d" }}</td>
+                        <td>{{ object.adjustment_date|date:"Y-m-d" }}</td>
                     </tr>
                     <tr>
                         <th>매장</th>
-                        <td>{{ adjustment.store.name }}</td>
+                        <td>{{ object.store.name }}</td>
                     </tr>
                     <tr>
                         <th>조정 사유</th>
-                        <td>{{ adjustment.reason|truncatechars:100|linebreaks }}</td>
+                        <td>{{ object.reason|truncatechars:100|linebreaks }}</td>
                     </tr>
                     <tr>
                         <th>등록자</th>
-                        <td>{{ adjustment.created_by.username|default:"-" }}</td>
+                        <td>{{ object.created_by.username|default:"-" }}</td>
                     </tr>
                     <tr>
                         <th>등록일</th>
-                        <td>{{ adjustment.created_at|date:"Y-m-d H:i" }}</td>
+                        <td>{{ object.created_at|date:"Y-m-d H:i:s" }}</td>
                     </tr>
                 </table>
                 
@@ -76,10 +76,10 @@
                 
                 <p class="text-danger">이 재고 조정 기록을 삭제하시겠습니까?</p>
                 <p class="text-muted small">
-                    {% if adjustment.adjustment_type == 'increase' %}
-                        <strong>참고:</strong> 이 조정을 삭제하면 해당 상품의 재고가 {{ adjustment.quantity }}개 <strong>감소</strong>합니다.
+                    {% if object.adjustment_type == 'increase' %}
+                        <strong>참고:</strong> 이 조정을 삭제하면 해당 상품의 재고가 {{ object.quantity }}개 <strong>감소</strong>합니다.
                     {% else %}
-                        <strong>참고:</strong> 이 조정을 삭제하면 해당 상품의 재고가 {{ adjustment.quantity }}개 <strong>증가</strong>합니다.
+                        <strong>참고:</strong> 이 조정을 삭제하면 해당 상품의 재고가 {{ object.quantity }}개 <strong>증가</strong>합니다.
                     {% endif %}
                 </p>
             </div>
@@ -87,7 +87,7 @@
             <form method="post">
                 {% csrf_token %}
                 <div class="d-flex justify-content-between">
-                    <a href="{% url 'inventory:stock_adjustment_detail' adjustment.id %}" class="btn btn-secondary">
+                    <a href="{% url 'inventory:stock_adjustment_detail' object.id %}" class="btn btn-secondary">
                         취소
                     </a>
                     <button type="submit" class="btn btn-danger">
