@@ -118,32 +118,32 @@
                 <div class="col-md-4 mb-4">
                     <div class="card h-100">
                         <div class="card-body text-center">
-                            <i class="bi bi-box-seam display-4 text-primary"></i>
-                            <h5 class="card-title mt-3">재고 관리</h5>
-                            <p class="card-text">제품 및 재고 현황 관리</p>
-                            <a href="{% url 'inventory:product_list' %}" class="btn btn-outline-primary">바로가기</a>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="col-md-4 mb-4">
-                    <div class="card h-100">
-                        <div class="card-body text-center">
-                            <i class="bi bi-cart-check display-4 text-success"></i>
+                            <i class="bi bi-cart-check display-4 text-primary"></i>
                             <h5 class="card-title mt-3">판매 관리</h5>
                             <p class="card-text">매장 판매 내역 관리</p>
-                            <a href="{% url 'sales:sale_list' %}" class="btn btn-outline-success">바로가기</a>
+                            <a href="{% url 'sales:sale_list' %}" class="btn btn-outline-primary">바로가기</a>
                         </div>
                     </div>
                 </div>
-                
+                                
                 <div class="col-md-4 mb-4">
                     <div class="card h-100">
                         <div class="card-body text-center">
-                            <i class="bi bi-arrow-return-left display-4 text-warning"></i>
+                            <i class="bi bi-box-seam display-4 text-warning"></i>
+                            <h5 class="card-title mt-3">재고 관리</h5>
+                            <p class="card-text">제품 및 재고 현황 관리</p>
+                            <a href="{% url 'inventory:product_list' %}" class="btn btn-outline-warning">바로가기</a>
+                        </div>
+                    </div>
+                </div>
+                                
+                <div class="col-md-4 mb-4">
+                    <div class="card h-100">
+                        <div class="card-body text-center">
+                            <i class="bi bi-arrow-return-left display-4 text-danger"></i>
                             <h5 class="card-title mt-3">반품 관리</h5>
                             <p class="card-text">고객 반품 처리 관리</p>
-                            <a href="{% url 'returns:return_list' %}" class="btn btn-outline-warning">바로가기</a>
+                            <a href="{% url 'returns:return_list' %}" class="btn btn-outline-danger">바로가기</a>
                         </div>
                     </div>
                 </div>
