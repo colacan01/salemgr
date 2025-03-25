@@ -60,8 +60,10 @@
                         <i class="bi bi-shop me-1"></i> {{ user.store.name }}
                     </span>
                 </div>
-                {% else %}
+                {% elif user.user_type == 'app_admin' %}
                 전체 매장 관리
+                {% else %}
+                Mall
                 {% endif %}                
             </a>
             {% endif %}
@@ -138,14 +140,7 @@
                         </li>
                         {% endif %}
                         
-                        {% if user.user_type == 'customer' %}
-                        <!-- 고객용 메뉴 -->
-                        <li class="nav-item">
-                            <a class="nav-link" href="#">
-                                <i class="bi bi-receipt me-1"></i> 구매 내역
-                            </a>
-                        </li>
-                        {% endif %}
+                        
                     {% endif %}
                 </ul>
                 
@@ -221,6 +216,9 @@
                                 <li><a class="dropdown-item" href="{% url 'accounts:edit_profile' %}">
                                     <i class="bi bi-pencil me-2"></i>프로필 수정
                                 </a></li>
+                                <li><a class="dropdown-item" href="#">
+                                    <i class="bi bi-receipt me-1"></i> 구매 내역
+                                </a></li>                                
                                 <li><hr class="dropdown-divider"></li>
                                 <li><a class="dropdown-item" href="{% url 'accounts:logout' %}">
                                     <i class="bi bi-box-arrow-right me-2"></i>로그아웃
