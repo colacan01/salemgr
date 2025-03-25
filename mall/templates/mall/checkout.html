@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+{% load static %}
+{% load mall_extras %}
+
+{% block title %}주문하기{% endblock %}
+
+{% block extra_head %}
+<style>
+  .checkout-summary {
+    background-color: #f8f9fa;
+  }
+  .checkout-product-img {
+    width: 60px;
+    height: 60px;
+    object-fit: cover;
+  }
+  .form-required:after {
+    content: "*";
+    color: #dc3545;
+    margin-left: 3px;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <h2 class="mb-4">주문하기</h2>
+  
+  {% if error %}
+  <div class="alert alert-danger">{{ error }}</div>
+  {% endif %}
+  
+  <div class="row">
+    <!-- 주문 양식 -->
+    <div class="col-lg-8 mb-4">
+      <div class="card">
+        <div class="card-header bg-light">
+          <h5 class="mb-0">배송 정보</h5>
+        </div>
+        <div class="card-body">
+          <form method="post" action="{% url 'mall:checkout' %}" id="checkout-form">
+            {% csrf_token %}
+            
+            <div class="row">
+              <!-- 이름 -->
+              <div class="col-md-6 mb-3">
+                <label for="name" class="form-label form-required">주문자명</label>
+                <input type="text" class="form-control" id="name" name="name" required>
+              </div>
+              
+              <!-- 연락처 -->
+              <div class="col-md-6 mb-3">
+                <label for="phone" class="form-label form-required">연락처</label>
+                <input type="tel" class="form-control" id="phone" name="phone" 
+                       placeholder="010-0000-0000" required>
+              </div>
+            </div>
+            
+            <!-- 배송지 주소 -->
+            <div class="mb-3">
+              <label for="address" class="form-label form-required">주소</label>
+              <input type="text" class="form-control mb-2" id="address" name="address" required>
+              <input type="text" class="form-control" id="address_detail" name="address_detail" 
+                     placeholder="상세주소를 입력해주세요">
+            </div>
+            
+            <!-- 배송 메모 -->
+            <div class="mb-4">
+              <label for="delivery_note" class="form-label">배송 요청사항</label>
+              <textarea class="form-control" id="delivery_note" name="delivery_note" rows="2"></textarea>
+            </div>
+            
+            <hr class="my-4">
+            
+            <div class="card-header bg-light mb-3">
+              <h5 class="mb-0">결제 정보</h5>
+            </div>
+            
+            <!-- 결제 방법 선택 -->
+            <div class="mb-4">
+              <label class="form-label form-required">결제 방법</label>
+              <div class="d-flex flex-wrap gap-3">
+                <div class="form-check">
+                  <input class="form-check-input" type="radio" name="payment_method" id="payment_card" value="card" checked>
+                  <label class="form-check-label" for="payment_card">카드 결제</label>
+                </div>
+                <div class="form-check">
+                  <input class="form-check-input" type="radio" name="payment_method" id="payment_transfer" value="transfer">
+                  <label class="form-check-label" for="payment_transfer">계좌이체</label>
+                </div>
+                <div class="form-check">
+                  <input class="form-check-input" type="radio" name="payment_method" id="payment_mobile" value="mobile">
+                  <label class="form-check-label" for="payment_mobile">모바일 결제</label>
+                </div>
+              </div>
+            </div>
+            
+            <!-- 필수 동의 사항 -->
+            <div class="mb-4">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="agree_terms" required>
+                <label class="form-check-label" for="agree_terms">
+                  <span class="text-danger">[필수]</span> 구매조건 확인 및 결제진행에 동의합니다.
+                </label>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 주문 요약 -->
+    <div class="col-lg-4">
+      <div class="card sticky-top checkout-summary" style="top: 20px;">
+        <div class="card-header bg-light">
+          <h5 class="mb-0">주문 상품 정보</h5>
+        </div>
+        <div class="card-body">
+          <!-- 주문 상품 목록 -->
+          <div class="mb-3">
+            {% for item in cart_items %}
+            <div class="d-flex align-items-center mb-2 pb-2 border-bottom">
+              <img src="{% if item.product.image %}{{ item.product.image.url }}{% else %}{% static 'images/no-image.png' %}{% endif %}" 
+                   alt="{{ item.product.name }}" class="checkout-product-img rounded me-2">
+              <div class="flex-grow-1">
+                <h6 class="mb-0">{{ item.product.name }}</h6>
+                <small class="text-muted">
+                  {% for opt in item.options %}
+                  {{ opt.name }}: {{ opt.value }}{% if not forloop.last %}, {% endif %}
+                  {% endfor %}
+                </small>
+                <div class="d-flex justify-content-between align-items-center mt-1">
+                  <span>{{ item.quantity }}개</span>
+                  <span class="fw-bold">{{ item.subtotal|currency }}</span>
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          
+          <!-- 결제 금액 -->
+          <div class="mb-4">
+            <div class="d-flex justify-content-between mb-2">
+              <span>상품 금액</span>
+              <span>{{ total|currency }}</span>
+            </div>
+            <div class="d-flex justify-content-between mb-2">
+              <span>배송비</span>
+              <span>0원</span>
+            </div>
+            <hr>
+            <div class="d-flex justify-content-between fw-bold">
+              <span>총 결제 금액</span>
+              <span class="text-primary fs-5">{{ total|currency }}</span>
+            </div>
+          </div>
+          
+          <!-- 결제하기 버튼 -->
+          <div class="d-grid gap-2">
+            <button type="submit" form="checkout-form" class="btn btn-primary btn-lg">
+              결제하기
+            </button>
+            <a href="{% url 'mall:cart' %}" class="btn btn-outline-secondary">
+              장바구니로 돌아가기
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

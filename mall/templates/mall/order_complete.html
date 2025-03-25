@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% load static %}
+{% load mall_extras %}
+
+{% block title %}주문 완료{% endblock %}
+
+{% block extra_head %}
+<style>
+  .order-complete-icon {
+    font-size: 60px;
+    color: #28a745;
+  }
+  .order-info-table th {
+    width: 150px;
+  }
+  .order-complete-container {
+    max-width: 800px;
+    margin: 0 auto;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <div class="card order-complete-container">
+    <div class="card-body text-center py-5">
+      <div class="order-complete-icon mb-3">
+        <i class="bi bi-check-circle"></i>
+      </div>
+      <h2 class="mb-3">주문이 완료되었습니다</h2>
+      <p class="text-muted mb-4">주문번호: <strong>{{ sale.sale_number }}</strong></p>
+      
+      <div class="card mb-4">
+        <div class="card-header bg-light text-start">
+          <h5 class="mb-0">주문 정보</h5>
+        </div>
+        <div class="card-body text-start">
+          <table class="table order-info-table">
+            <tr>
+              <th>주문번호</th>
+              <td>{{ sale.sale_number }}</td>
+            </tr>
+            <tr>
+              <th>주문일시</th>
+              <td>{{ sale.sale_date|date:"Y년 m월 d일 H:i" }}</td>
+            </tr>
+            <tr>
+              <th>주문자</th>
+              <td>{{ sale.customer_name|default:"-" }}</td>
+            </tr>
+            <tr>
+              <th>연락처</th>
+              <td>{{ sale.customer_phone|default:"-" }}</td>
+            </tr>
+            <tr>
+              <th>결제 방법</th>
+              <td>{{ sale.get_payment_method_display }}</td>
+            </tr>
+            <tr>
+              <th>결제 금액</th>
+              <td class="fw-bold text-primary">{{ sale.final_amount|currency }}</td>
+            </tr>
+          </table>
+        </div>
+      </div>
+      
+      <div class="text-center mt-4">
+        <a href="{% url 'mall:home' %}" class="btn btn-primary">
+          홈으로 돌아가기
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

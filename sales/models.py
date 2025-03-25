@@ -24,6 +24,13 @@ class Sale(models.Model):
         ('refunded', '환불됨'),
     )
     
+    SALES_CHANNELS = (
+        ('offline', '오프라인'),
+        ('online', '온라인'),
+        ('other', '기타'),
+    )
+
+
     sale_number = models.CharField(max_length=20, unique=True, verbose_name='판매번호')
     sale_date = models.DateTimeField(default=timezone.now, verbose_name='판매일시')
     store = models.ForeignKey(Store, on_delete=models.PROTECT, verbose_name='판매 매장')
@@ -35,6 +42,7 @@ class Sale(models.Model):
     discount_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name='할인 금액')
     final_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name='최종 결제액')
     notes = models.TextField(blank=True, null=True, verbose_name='비고')
+    sales_channel = models.CharField(max_length=10, choices=SALES_CHANNELS, default='offline', verbose_name='판매 채널')
     
     created_by = models.ForeignKey(User, on_delete=models.PROTECT, related_name='created_sales', verbose_name='등록자')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='생성일시')
@@ -71,7 +79,7 @@ class Sale(models.Model):
 class SaleItem(models.Model):
     """판매된 개별 상품 정보"""
     sale = models.ForeignKey(Sale, on_delete=models.CASCADE, related_name='saleitems', verbose_name='판매')
-    product = models.ForeignKey(Product, on_delete=models.PROTECT, verbose_name='상품')
+    product = models.ForeignKey(Product, on_delete=models.PROTECT, related_name='items', verbose_name='상품')
     quantity = models.PositiveIntegerField(default=1, verbose_name='수량')
     price = models.DecimalField(max_digits=12, decimal_places=2, verbose_name='판매 가격')
     discount = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name='할인액')

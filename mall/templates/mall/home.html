@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% load static %}
+{% load mall_extras %}
+
+{% block title %}온라인 쇼핑몰 - 홈{% endblock %}
+
+{% block extra_head %}
+<style>
+  .product-card {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    height: 100%;
+  }
+  .product-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+  }
+  .card-img-top {
+    height: 200px;
+    object-fit: cover;
+  }
+  .section-title {
+    position: relative;
+    margin-bottom: 30px;
+    text-align: center;
+  }
+  .section-title:after {
+    content: '';
+    position: absolute;
+    bottom: -10px;
+    left: 50%;
+    width: 50px;
+    height: 2px;
+    background-color: #007bff;
+    transform: translateX(-50%);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <!-- 인기 상품 섹션 -->
+  <section class="mb-5">
+    <h2 class="section-title">인기 상품</h2>
+    <div class="row">
+      {% for product in popular_products %}
+      <div class="col-6 col-md-4 col-lg-3 mb-4">
+        <div class="card product-card">
+          <img src="{% if product.image %}{{ product.image.url }}{% else %}{% static 'images/no-image.png' %}{% endif %}" 
+               class="card-img-top" alt="{{ product.name }}">
+          <div class="card-body d-flex flex-column">
+            <div class="mb-auto">
+              <h6 class="card-subtitle mb-1 text-muted small">{{ product.store.name|default:'기본 매장' }}</h6>
+              <h5 class="card-title">{{ product.name }}</h5>
+            </div>
+            <div class="mt-2">
+              <p class="card-text text-primary fw-bold mb-2">{{ product.get_current_price|currency }}</p>
+              <a href="{% url 'mall:product_detail' product.id %}" class="btn btn-outline-primary btn-sm w-100">상세보기</a>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% empty %}
+      <div class="col-12">
+        <div class="alert alert-info text-center">인기 상품이 없습니다.</div>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <!-- 신규 상품 섹션 -->
+  <section class="mb-5">
+    <h2 class="section-title">신규 상품</h2>
+    <div class="row">
+      {% for product in new_products %}
+      <div class="col-6 col-md-4 col-lg-3 mb-4">
+        <div class="card product-card">
+          <img src="{% if product.image %}{{ product.image.url }}{% else %}{% static 'images/no-image.png' %}{% endif %}" 
+               class="card-img-top" alt="{{ product.name }}">
+          <div class="card-body d-flex flex-column">
+            <div class="mb-auto">
+              <h6 class="card-subtitle mb-1 text-muted small">{{ product.store.name|default:'기본 매장' }}</h6>
+              <h5 class="card-title">{{ product.name }}</h5>
+            </div>
+            <div class="mt-2">
+              <p class="card-text text-primary fw-bold mb-2">{{ product.get_current_price|currency }}</p>
+              <a href="{% url 'mall:product_detail' product.id %}" class="btn btn-outline-primary btn-sm w-100">상세보기</a>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% empty %}
+      <div class="col-12">
+        <div class="alert alert-info text-center">신규 상품이 없습니다.</div>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <!-- 카테고리 섹션 -->
+  <section class="mb-5">
+    <h2 class="section-title">카테고리</h2>
+    <div class="d-flex flex-wrap justify-content-center gap-3 mt-4">
+      {% for category in categories %}
+      <a href="?category={{ category }}" class="btn btn-outline-secondary">{{ category }}</a>
+      {% empty %}
+      <div class="alert alert-info text-center w-100">등록된 카테고리가 없습니다.</div>
+      {% endfor %}
+    </div>
+  </section>
+</div>
+{% endblock %}

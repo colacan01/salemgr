@@ -28,7 +28,7 @@ def login_view(request):
                 elif user.user_type in ['store_manager', 'store_staff']:
                     return redirect('sales:dashboard')
                 else:  # customer
-                    return redirect('home')
+                    return redirect('mall:home')
     else:
         form = AuthenticationForm()
     

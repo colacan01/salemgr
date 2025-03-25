@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+{% load static %}
+{% load mall_extras %}
+
+{% block title %}{{ product.name }} | 상품 상세{% endblock %}
+
+{% block extra_head %}
+<style>
+  .product-image {
+    max-height: 400px;
+    object-fit: contain;
+    width: 100%;
+  }
+  .option-price {
+    color: #6c757d;
+    font-size: 0.85em;
+  }
+  .quantity-control {
+    max-width: 150px;
+  }
+  .product-description {
+    white-space: pre-line;
+  }
+  .price-original {
+    text-decoration: line-through;
+    color: #6c757d;
+    font-size: 0.9em;
+  }
+  .price-current {
+    font-size: 1.5em;
+    color: #dc3545;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="{% url 'mall:home' %}">홈</a></li>
+      {% if product.category %}
+      <li class="breadcrumb-item"><a href="{% url 'mall:home' %}?category={{ product.category.name }}">{{ product.category.name }}</a></li>
+      {% endif %}
+      <li class="breadcrumb-item active" aria-current="page">{{ product.name }}</li>
+    </ol>
+  </nav>
+  
+  <div class="row">
+    <!-- 상품 이미지 -->
+    <div class="col-lg-6 mb-4">
+      <div class="card">
+        <img src="{% if product.image %}{{ product.image.url }}{% else %}{% static 'images/no-image.png' %}{% endif %}" 
+             class="product-image card-img-top" alt="{{ product.name }}">
+      </div>
+    </div>
+    
+    <!-- 상품 정보 및 구매 옵션 -->
+    <div class="col-lg-6">
+      <h6 class="text-muted">{{ product.store.name|default:'기본 매장' }}</h6>
+      <h2 class="mb-3">{{ product.name }}</h2>
+      
+      {% with current_price=product.get_current_price %}
+      <div class="mb-4">
+        <span class="price-current">{{ current_price|currency }}</span>
+      </div>
+      {% endwith %}
+      
+      <hr>
+      
+      <div class="product-description mb-4">
+        {{ product.description|default:"상품 설명이 없습니다." }}
+      </div>
+      
+      <!-- 구매 옵션 폼 -->
+      <form action="{% url 'mall:add_to_cart' product.id %}" method="post">
+        {% csrf_token %}
+        
+        <!-- 상품 옵션 -->
+        {% if options %}
+        <div class="mb-4">
+          <h5>옵션 선택</h5>
+          {% for option in options %}
+          <div class="mb-3">
+            <label for="option_{{ option.id }}" class="form-label">{{ option.name }}{% if option.is_required %} <span class="text-danger">*</span>{% endif %}</label>
+            <select name="option_{{ option.id }}" id="option_{{ option.id }}" class="form-select" {% if option.is_required %}required{% endif %}>
+              <option value="">선택하세요</option>
+              {% for value in option_values|get_item:option %}
+              <option value="{{ value.id }}">
+                {{ value.value }}
+                {% if value.price_adjustment != 0 %}
+                <span class="option-price">({% if value.price_adjustment > 0 %}+{% endif %}{{ value.price_adjustment|currency }})</span>
+                {% endif %}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+        
+        <!-- 수량 선택 -->
+        <div class="mb-4">
+          <h5>수량</h5>
+          <div class="input-group quantity-control">
+            <button type="button" class="btn btn-outline-secondary" id="decrease-qty">-</button>
+            <input type="number" class="form-control text-center" id="quantity" name="quantity" value="1" min="1" max="100">
+            <button type="button" class="btn btn-outline-secondary" id="increase-qty">+</button>
+          </div>
+          <small class="form-text text-muted">최대 구매 가능 수량: 100개</small>
+        </div>
+        
+        <!-- 재고 정보 -->
+        <div class="mb-4">
+          <p>
+            재고 상태: 
+            {% with stock=product.get_current_stock %}
+              {% if stock > 0 %}
+              <span class="text-success">재고 있음 ({{ stock }}개)</span>
+              {% else %}
+              <span class="text-danger">재고 없음</span>
+              {% endif %}
+            {% endwith %}
+          </p>
+        </div>
+        
+        <!-- 구매 버튼 -->
+        <div class="d-grid gap-2">
+          <button type="submit" class="btn btn-primary btn-lg">장바구니 담기</button>
+          <button type="button" class="btn btn-outline-success btn-lg">바로 구매하기</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  
+  <!-- 상품 상세 정보 -->
+  <div class="row mt-5">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header bg-light">
+          <h3 class="mb-0">상품 상세 정보</h3>
+        </div>
+        <div class="card-body">
+          <div class="product-description">
+            {{ product.description|linebreaks|default:"상세 정보가 없습니다." }}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 수량 조절 스크립트 -->
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const quantityInput = document.getElementById('quantity');
+    const decreaseButton = document.getElementById('decrease-qty');
+    const increaseButton = document.getElementById('increase-qty');
+    
+    decreaseButton.addEventListener('click', function() {
+      const currentValue = parseInt(quantityInput.value);
+      if (currentValue > 1) {
+        quantityInput.value = currentValue - 1;
+      }
+    });
+    
+    increaseButton.addEventListener('click', function() {
+      const currentValue = parseInt(quantityInput.value);
+      if (currentValue < 100) {
+        quantityInput.value = currentValue + 1;
+      }
+    });
+  });
+</script>
+{% endblock %}
