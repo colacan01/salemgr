@@ -7,10 +7,112 @@
 <div class="container">
     <div class="row justify-content-center">
         <div class="col-md-8 text-center">
-            <h1 class="display-4 mt-5">화장품 매장 관리 시스템</h1>
+            <h1 class="display-4 mt-5">매장 관리 시스템</h1>
             <p class="lead mb-5">매장 운영, 재고 관리, 판매 및 반품 처리를 위한 통합 관리 시스템입니다.</p>
             
             {% if user.is_authenticated %}
+
+            <!-- 관리자, 매장관리자, 매장직원용 요약 통계 카드 -->
+            {% if user.user_type == 'app_admin' or user.user_type == 'store_manager' or user.user_type == 'store_staff' %}
+            
+            <!-- 요약 통계 섹션 -->
+            <div class="row mb-5">
+                <div class="col-12">
+                    <h3 class="mb-3 text-start">요약 통계</h3>
+                </div>
+                
+                <!-- 판매 요약 -->
+                <div class="col-md-4 mb-4">
+                    <div class="card h-100 dashboard-card border-primary">
+                        <div class="card-header bg-primary text-white">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">판매 현황</h5>
+                                <i class="bi bi-cart-check fs-4"></i>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="row text-center">
+                                <div class="col-6 border-end">
+                                    <h3>{{ sales_today|default:"0" }}</h3>
+                                    <p class="mb-0 text-muted">오늘 판매건수</p>
+                                </div>
+                                <div class="col-6">
+                                    <h3>{{ sales_amount|default:"0"|floatformat:0 }}원</h3>
+                                    <p class="mb-0 text-muted">오늘 판매액</p>
+                                </div>
+                            </div>
+                            <hr>
+                            <div class="d-grid">
+                                <a href="{% url 'sales:dashboard' %}" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-graph-up me-1"></i> 판매 통계 보기
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 재고 요약 -->
+                <div class="col-md-4 mb-4">
+                    <div class="card h-100 dashboard-card border-warning">
+                        <div class="card-header bg-warning text-dark">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">재고 현황</h5>
+                                <i class="bi bi-box-seam fs-4"></i>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="row text-center">
+                                <div class="col-6 border-end">
+                                    <h3>{{ low_stock_count|default:"0" }}</h3>
+                                    <p class="mb-0 text-muted">부족 재고</p>
+                                </div>
+                                <div class="col-6">
+                                    <h3>{{ out_of_stock_count|default:"0" }}</h3>
+                                    <p class="mb-0 text-muted">품절 상품</p>
+                                </div>
+                            </div>
+                            <hr>
+                            <div class="d-grid">
+                                <a href="{% url 'inventory:stock_status' %}" class="btn btn-sm btn-outline-warning">
+                                    <i class="bi bi-list-check me-1"></i> 재고 현황 보기
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 반품 요약 -->
+                <div class="col-md-4 mb-4">
+                    <div class="card h-100 dashboard-card border-danger">
+                        <div class="card-header bg-danger text-white">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">반품 현황</h5>
+                                <i class="bi bi-arrow-return-left fs-4"></i>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="row text-center">
+                                <div class="col-6 border-end">
+                                    <h3>{{ pending_returns|default:"0" }}</h3>
+                                    <p class="mb-0 text-muted">처리대기</p>
+                                </div>
+                                <div class="col-6">
+                                    <h3>{{ today_returns|default:"0" }}</h3>
+                                    <p class="mb-0 text-muted">오늘 반품</p>
+                                </div>
+                            </div>
+                            <hr>
+                            <div class="d-grid">
+                                <a href="{% url 'returns:return_list' %}" class="btn btn-sm btn-outline-danger">
+                                    <i class="bi bi-list-ul me-1"></i> 반품 목록 보기
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
             <div class="row mt-4">
                 {% if user.user_type == 'app_admin' or user.user_type == 'store_manager' or user.user_type == 'store_staff' %}
                 <div class="col-md-4 mb-4">
