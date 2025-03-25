@@ -43,10 +43,15 @@ def product_detail(request, product_id):
     for option in options:
         option_values[option] = ProductOptionValue.objects.filter(option=option, is_active=True)
     
+    current_stock = product.get_current_stock()
+    max_purchase_qty = min(current_stock, 100) if current_stock > 0 else 0
+    
     context = {
         'product': product,
         'options': options,
         'option_values': option_values,
+        'current_stock': current_stock,
+        'max_purchase_qty': max_purchase_qty,
     }
     return render(request, 'mall/product_detail.html', context)
 

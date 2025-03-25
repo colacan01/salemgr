@@ -7,9 +7,10 @@
 {% block extra_head %}
 <style>
   .product-image {
-    max-height: 400px;
+    height: 500px;
     object-fit: contain;
     width: 100%;
+    object-position: center;
   }
   .option-price {
     color: #6c757d;
@@ -103,10 +104,12 @@
           <h5>수량</h5>
           <div class="input-group quantity-control">
             <button type="button" class="btn btn-outline-secondary" id="decrease-qty">-</button>
-            <input type="number" class="form-control text-center" id="quantity" name="quantity" value="1" min="1" max="100">
-            <button type="button" class="btn btn-outline-secondary" id="increase-qty">+</button>
+            <input type="number" class="form-control text-center" id="quantity" name="quantity" 
+                  value="1" min="1" max="{{ max_purchase_qty }}" {% if max_purchase_qty == 0 %}disabled{% endif %}>
+            <button type="button" class="btn btn-outline-secondary" id="increase-qty" 
+                  {% if max_purchase_qty == 0 %}disabled{% endif %}>+</button>
           </div>
-          <small class="form-text text-muted">최대 구매 가능 수량: 100개</small>
+          <small class="form-text text-muted">최대 구매 가능 수량: {{ max_purchase_qty }}개</small>
         </div>
         
         <!-- 재고 정보 -->
@@ -125,8 +128,12 @@
         
         <!-- 구매 버튼 -->
         <div class="d-grid gap-2">
-          <button type="submit" class="btn btn-primary btn-lg">장바구니 담기</button>
-          <button type="button" class="btn btn-outline-success btn-lg">바로 구매하기</button>
+          <button type="submit" class="btn btn-primary btn-lg" {% if max_purchase_qty == 0 %}disabled{% endif %}>
+            장바구니 담기
+          </button>
+          <button type="button" class="btn btn-outline-success btn-lg" {% if max_purchase_qty == 0 %}disabled{% endif %}>
+            바로 구매하기
+          </button>
         </div>
       </form>
     </div>
@@ -155,6 +162,7 @@
     const quantityInput = document.getElementById('quantity');
     const decreaseButton = document.getElementById('decrease-qty');
     const increaseButton = document.getElementById('increase-qty');
+    const maxQuantity = {{ max_purchase_qty }};
     
     decreaseButton.addEventListener('click', function() {
       const currentValue = parseInt(quantityInput.value);
@@ -165,8 +173,18 @@
     
     increaseButton.addEventListener('click', function() {
       const currentValue = parseInt(quantityInput.value);
-      if (currentValue < 100) {
+      if (currentValue < maxQuantity) {
         quantityInput.value = currentValue + 1;
+      }
+    });
+    
+    // 입력값 검증
+    quantityInput.addEventListener('change', function() {
+      let value = parseInt(this.value);
+      if (isNaN(value) || value < 1) {
+        this.value = 1;
+      } else if (value > maxQuantity) {
+        this.value = maxQuantity;
       }
     });
   });
