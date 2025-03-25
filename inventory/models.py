@@ -75,7 +75,41 @@ class Product(models.Model):
         
         # 모든 매장의 재고 합계 반환
         return sum(stock.quantity for stock in self.stocks.all())
+    
+class ProductOption(models.Model):
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='options', verbose_name='상품')
+    name = models.CharField(max_length=100, verbose_name='옵션명')
+    display_order = models.PositiveIntegerField(default=0, verbose_name='표시순서')
+    is_required = models.BooleanField(default=False, verbose_name='필수여부')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='등록일')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='수정일')
+    
+    class Meta:
+        verbose_name = '상품옵션'
+        verbose_name_plural = '상품옵션'
+        ordering = ['display_order', 'name']
+        unique_together = ['product', 'name']
+        
+    def __str__(self):
+        return f"{self.product.name} - {self.name}"
 
+class ProductOptionValue(models.Model):
+    option = models.ForeignKey(ProductOption, on_delete=models.CASCADE, related_name='values', verbose_name='옵션')
+    value = models.CharField(max_length=100, verbose_name='옵션값')
+    price_adjustment = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name='가격조정')
+    display_order = models.PositiveIntegerField(default=0, verbose_name='표시순서')
+    is_active = models.BooleanField(default=True, verbose_name='활성상태')
+    
+    class Meta:
+        verbose_name = '옵션값'
+        verbose_name_plural = '옵션값'
+        ordering = ['display_order', 'value']
+        unique_together = ['option', 'value']
+        
+    def __str__(self):
+        price_info = f"({'+' if self.price_adjustment > 0 else ''}{self.price_adjustment})" if self.price_adjustment != 0 else ""
+        return f"{self.option.name}: {self.value} {price_info}"
+                
 class ProductPrice(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='prices', verbose_name='상품')
     price = models.DecimalField(max_digits=12, decimal_places=2, validators=[MinValueValidator(0)], verbose_name='판매가격')
