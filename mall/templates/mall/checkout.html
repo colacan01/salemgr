@@ -121,7 +121,7 @@
             {% for item in cart_items %}
             <div class="d-flex align-items-center mb-2 pb-2 border-bottom">
               <img src="{% if item.product.image %}{{ item.product.image.url }}{% else %}{% static 'images/no-image.png' %}{% endif %}" 
-                   alt="{{ item.product.name }}" class="checkout-product-img rounded me-2">
+                   alt="{{ item.product.name }}" class="checkout-product-img rounded me-2" style="flex-shrink: 0; width: 60px; height: 60px; object-fit: cover;">
               <div class="flex-grow-1">
                 <h6 class="mb-0">{{ item.product.name }}</h6>
                 <small class="text-muted">

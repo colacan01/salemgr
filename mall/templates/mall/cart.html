@@ -51,7 +51,7 @@
               <td>
                 <div class="d-flex align-items-center">
                   <img src="{% if item.product.image %}{{ item.product.image.url }}{% else %}{% static 'images/no-image.png' %}{% endif %}" 
-                       alt="{{ item.product.name }}" class="cart-thumbnail rounded me-3">
+                       alt="{{ item.product.name }}" class="cart-thumbnail rounded me-3" style="flex-shrink: 0;width: 40px; height: 40px; object-fit: cover;">
                   <div>
                     <h6 class="mb-0">{{ item.product.name }}</h6>
                     <small class="text-muted">{{ item.product.store.name|default:'기본 매장' }}</small>
