@@ -24,6 +24,11 @@ class User(AbstractUser):
     
     def __str__(self):
         return f"{self.username} ({self.get_user_type_display()})"
+    
+    def get_customer_name(self):
+        if self.user_type == 'customer':
+            return self.last_name + self.first_name
+        return ''
 
 class Store(models.Model):
     name = models.CharField(max_length=100)

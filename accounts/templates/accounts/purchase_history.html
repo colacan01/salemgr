@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}구매내역{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <h2 class="mb-4">나의 구매내역</h2>
+  
+  <!-- 통계 정보 -->
+  <div class="row mb-4">
+    <div class="col-md-4">
+      <div class="card text-center bg-light">
+        <div class="card-body">
+          <h5 class="card-title">총 구매 횟수</h5>
+          <p class="card-text display-4">{{ stats.total_purchases }}</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card text-center bg-light">
+        <div class="card-body">
+          <h5 class="card-title">총 구매 금액</h5>
+          <p class="card-text display-4">{{ stats.total_amount|floatformat:0|intcomma }}원</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card text-center bg-light">
+        <div class="card-body">
+          <h5 class="card-title">총 구매 상품수</h5>
+          <p class="card-text display-4">{{ stats.total_items }}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- 구매 목록 -->
+  <h3 class="mb-3">구매 목록</h3>
+  {% if purchase_list %}
+    <div class="row">
+      {% for sale in purchase_list %}
+        <div class="col-md-6 mb-3">
+          <div class="card h-100">
+            <div class="row g-0">
+              <div class="col-md-4">
+                {% with first_item=sale.saleitems.first %}
+                  {% if first_item.product.image %}
+                    <img src="{{ first_item.product.image.url }}" class="img-fluid rounded-start" alt="{{ first_item.product.name }}">
+                  {% else %}
+                    <img src="{% static 'img/no-image.png' %}" class="img-fluid rounded-start" alt="No Image">
+                  {% endif %}
+                {% endwith %}
+              </div>
+              <div class="col-md-8">
+                <div class="card-body">
+                  <h5 class="card-title">주문번호: {{ sale.id }}</h5>
+                  <p class="card-text">구매일: {{ sale.created_at|date:"Y-m-d H:i" }}</p>
+                  <p class="card-text">총액: {{ sale.total_amount|floatformat:0|intcomma }}원</p>
+                  <p class="card-text"><small class="text-muted">상품 {{ sale.get_total_quantity }}개</small></p>
+                  <a href="{% url 'accounts:purchase_detail' sale.id %}" class="btn btn-primary">상세보기</a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="alert alert-info">
+      구매 내역이 없습니다.
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

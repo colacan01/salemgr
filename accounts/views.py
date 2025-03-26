@@ -1,12 +1,14 @@
 from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.forms import AuthenticationForm
 from django.urls import reverse_lazy
 from django.views import generic
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
+from sales.models import Sale, SaleItem
+from django.db.models import Count, Sum
 
 from .models import User, Store
 from .forms import SignupForm, ProfileEditForm, StoreForm  # ProfileEditForm 추가, StoreForm 추가
@@ -70,6 +72,40 @@ def edit_profile_view(request):
         form = ProfileEditForm(instance=request.user)
     
     return render(request, 'accounts/edit_profile.html', {'form': form})
+
+@login_required
+def purchase_history(request):
+    # 현재 로그인한 사용자의 이름으로 판매 기록 검색
+    user_name = request.user.get_customer_name()
+    
+    print("[debug] purchase_history :: user_name",user_name
+          )
+    purchase_list = Sale.objects.filter(customer_name=user_name).order_by('-created_at')
+    
+    # 통계 데이터 계산
+    stats = {
+        'total_purchases': purchase_list.count(),
+        'total_amount': purchase_list.aggregate(Sum('total_amount'))['total_amount__sum'] or 0,
+        'total_items': SaleItem.objects.filter(sale__in=purchase_list).count(),
+    }
+    
+    context = {
+        'purchase_list': purchase_list,
+        'stats': stats,
+    }
+    return render(request, 'accounts/purchase_history.html', context)
+
+@login_required
+def purchase_detail(request, sale_id):
+    # 구매 상세 정보 조회
+    sale = get_object_or_404(Sale, id=sale_id)
+    sale_items = SaleItem.objects.filter(sale=sale)
+    
+    context = {
+        'sale': sale,
+        'sale_items': sale_items,
+    }
+    return render(request, 'accounts/purchase_detail.html', context)
 
 # 관리자/매장관리자만 접근 가능하도록 하는 믹스인
 class AdminOrStoreManagerRequiredMixin(UserPassesTestMixin):

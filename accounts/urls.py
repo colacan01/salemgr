@@ -16,4 +16,7 @@ urlpatterns = [
     path('stores/<int:pk>/', views.StoreDetailView.as_view(), name='store_detail'),
     path('stores/<int:pk>/update/', views.StoreUpdateView.as_view(), name='store_update'),
     path('stores/<int:pk>/delete/', views.StoreDeleteView.as_view(), name='store_delete'),
+    
+    path('purchase-history/', views.purchase_history, name='purchase_history'),
+    path('purchase-detail/<int:sale_id>/', views.purchase_detail, name='purchase_detail'),
 ]
