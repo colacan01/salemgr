@@ -7,16 +7,26 @@ from inventory.models import Product, ProductOption, ProductOptionValue, StockRe
 from sales.models import Sale, SaleItem
 
 def home(request):
+    # 카테고리 필터링
+    category_name = request.GET.get('category')
+    
+    # 기본 필터 (활성 상품)
+    product_filter = Q(is_active=True)
+    
+    # 카테고리 필터 추가
+    if category_name:
+        product_filter &= Q(category__name=category_name)
+    
     # 판매금액 기준 상위 5개 인기 상품
     popular_products = Product.objects.filter(
-        is_active=True
+        product_filter
     ).annotate(
         total_sales=Sum('items__subtotal')
     ).order_by('-total_sales')[:5]
     
     # 최신 입고 상품 5개
     new_products = Product.objects.filter(
-        is_active=True,
+        product_filter,
         receipts__receipt_date__lte=timezone.now().date()  # 오늘 이전 입고된 상품
     ).annotate(
         latest_receipt=Max('receipts__receipt_date')
@@ -31,6 +41,7 @@ def home(request):
         'popular_products': popular_products,
         'new_products': new_products,
         'categories': categories,
+        'selected_category': category_name,  # 선택된 카테고리 컨텍스트에 추가
     }
     return render(request, 'mall/home.html', context)
 

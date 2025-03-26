@@ -39,6 +39,25 @@
 
 {% block content %}
 <div class="container mt-4">
+
+    <!-- 카테고리 섹션 -->
+    <section class="mb-5">
+      <h2 class="section-title">카테고리</h2>
+      <div class="d-flex flex-wrap justify-content-center gap-3 mt-4">
+        <a href="{% url 'mall:home' %}" class="btn {% if not selected_category %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+          전체 카테고리
+        </a>
+        {% for category in categories %}
+        <a href="?category={{ category }}" 
+           class="btn {% if selected_category == category %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+          {{ category }}
+        </a>
+        {% empty %}
+        <div class="alert alert-info text-center w-100">등록된 카테고리가 없습니다.</div>
+        {% endfor %}
+      </div>
+    </section>
+    
   <!-- 인기 상품 섹션 -->
   <section class="mb-5">
     <h2 class="section-title">인기 상품</h2>
@@ -119,16 +138,6 @@
     </div>
   </section>
 
-  <!-- 카테고리 섹션 -->
-  <section class="mb-5">
-    <h2 class="section-title">카테고리</h2>
-    <div class="d-flex flex-wrap justify-content-center gap-3 mt-4">
-      {% for category in categories %}
-      <a href="?category={{ category }}" class="btn btn-outline-secondary">{{ category }}</a>
-      {% empty %}
-      <div class="alert alert-info text-center w-100">등록된 카테고리가 없습니다.</div>
-      {% endfor %}
-    </div>
-  </section>
+
 </div>
 {% endblock %}
