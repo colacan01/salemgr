@@ -7,10 +7,9 @@
 {% block extra_head %}
 <style>
   .product-image {
-    height: 500px;
+    max-height: 400px;
     object-fit: contain;
     width: 100%;
-    object-position: center;
   }
   .option-price {
     color: #6c757d;
@@ -50,8 +49,11 @@
     <!-- 상품 이미지 -->
     <div class="col-lg-6 mb-4">
       <div class="card">
-        <img src="{% if product.image %}{{ product.image.url }}{% else %}{% static 'images/no-image.png' %}{% endif %}" 
-             class="product-image card-img-top" alt="{{ product.name }}">
+        <div class="product-image-wrapper" style="height: 500px; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+          <img src="{% if product.image %}{{ product.image.url }}{% else %}{% static 'images/no-image.png' %}{% endif %}" 
+              style="max-height: 100%; max-width: 100%; object-fit: contain; object-position: center;" 
+              alt="{{ product.name }}">
+        </div>
       </div>
     </div>
     
