@@ -63,7 +63,7 @@
     <h2 class="section-title">인기 상품</h2>
     <div class="row">
       {% for product in popular_products %}
-      <div class="col-6 col-md-4 col-lg-3 mb-4">
+      {% comment %} <div class="col-6 col-md-4 col-lg-3 mb-4">
         <div class="card product-card">
           <div class="product-image-wrapper" style="height: 250px; overflow: hidden;">
             <img src="{% if product.image %}{{ product.image.url }}{% else %}{% static 'images/no-image.png' %}{% endif %}" 
@@ -89,7 +89,8 @@
             </div>
           </div>
         </div>
-      </div>
+      </div> {% endcomment %}
+        {% include 'mall/partials/product_card.html' %}
       {% empty %}
       <div class="col-12">
         <div class="alert alert-info text-center">인기 상품이 없습니다.</div>
@@ -103,7 +104,7 @@
     <h2 class="section-title">신규 상품</h2>
     <div class="row">
       {% for product in new_products %}
-      <div class="col-6 col-md-4 col-lg-3 mb-4">
+      {% comment %} <div class="col-6 col-md-4 col-lg-3 mb-4">
         <div class="card product-card">
           <div class="product-image-wrapper" style="height: 250px; overflow: hidden;">
             <img src="{% if product.image %}{{ product.image.url }}{% else %}{% static 'images/no-image.png' %}{% endif %}" 
@@ -129,7 +130,8 @@
             </div>
           </div>
         </div>
-      </div>
+      </div> {% endcomment %}
+        {% include 'mall/partials/product_card.html' %}
       {% empty %}
       <div class="col-12">
         <div class="alert alert-info text-center">신규 상품이 없습니다.</div>
