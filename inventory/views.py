@@ -567,11 +567,11 @@ class StockReleaseListView(StoreStaffRequiredMixin, ListView):
         # 날짜 필터링
         start_date = self.request.GET.get('start_date')
         if start_date:
-            queryset = queryset.filter(receipt_date__gte=start_date)
+            queryset = queryset.filter(release_date__gte=start_date)
             
         end_date = self.request.GET.get('end_date')
         if end_date:
-            queryset = queryset.filter(receipt_date__lte=end_date)
+            queryset = queryset.filter(release_date__lte=end_date)
         
         # 매장 필터링
         selected_store = self.request.GET.get('store')
