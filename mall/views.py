@@ -107,36 +107,7 @@ def add_to_cart(request, product_id):
 @login_required
 def cart(request):
     cart = request.session.get('cart', {})
-    cart_items = []
-    
-    for item_key, item_data in cart.items():
-        product = get_object_or_404(Product, id=item_data['product_id'])
-        selected_options = []
-        
-        for option_id, value_id in item_data['options'].items():
-            try:
-                option = ProductOption.objects.get(id=int(option_id))
-                option_value = ProductOptionValue.objects.get(id=int(value_id))
-                selected_options.append({
-                    'name': option.name,
-                    'value': option_value.value,
-                    'price_adjustment': float(option_value.price_adjustment)
-                })
-            except (ProductOption.DoesNotExist, ProductOptionValue.DoesNotExist):
-                continue
-        
-        # 옵션 가격 조정 계산
-        option_price_adjustment = sum(opt['price_adjustment'] for opt in selected_options)
-        unit_price = item_data['price'] + option_price_adjustment
-        
-        cart_items.append({
-            'item_key': item_key,
-            'product': product,
-            'options': selected_options,
-            'quantity': item_data['quantity'],
-            'unit_price': unit_price,
-            'subtotal': unit_price * item_data['quantity']
-        })
+    cart_items = get_cart_items(cart)
     
     total = sum(item['subtotal'] for item in cart_items)
     
@@ -187,6 +158,7 @@ def checkout(request):
         # 결제 처리 및 주문 생성 로직
         from sales.models import Sale, SaleItem
         from accounts.models import Store
+        from inventory.models import Product, StockRelease  # StockRelease import 추가
         
         # 기본 매장 가져오기 (실제 구현에서는 적절한 방법으로 매장 선택)
         store = Store.objects.first()
@@ -209,6 +181,20 @@ def checkout(request):
         
         total_amount = 0
         
+        # 재고 확인 및 판매 가능 여부 체크
+        for item_key, item_data in cart.items():
+            product = get_object_or_404(Product, id=item_data['product_id'])
+            current_stock = product.get_current_stock()
+                        
+            if current_stock < item_data['quantity']:
+                # 재고 부족 시 판매 취소 및 오류 표시
+                sale.delete()  # 생성된 판매 취소
+                error_message = f"{product.name}의 재고가 부족합니다. 현재 재고: {current_stock}개"
+                return render(request, 'mall/checkout.html', {
+                    'error': error_message, 
+                    'cart_items': get_cart_items(cart)
+                })
+        
         # 장바구니 아이템을 판매 아이템으로 변환
         for item_key, item_data in cart.items():
             product = get_object_or_404(Product, id=item_data['product_id'])
@@ -217,7 +203,7 @@ def checkout(request):
             option_price_adjustment = 0
             for option_id, value_id in item_data['options'].items():
                 try:
-                    option_value = ProductOptionValue.objects.get(id=int(value_id))
+                    option_value = ProductOptionValue.objects.get(id=int(value_id))  # id() 함수 호출 제거
                     option_price_adjustment += option_value.price_adjustment
                 except ProductOptionValue.DoesNotExist:
                     pass
@@ -234,6 +220,17 @@ def checkout(request):
                 subtotal=subtotal
             )
             
+            # 재고 출고 처리 추가
+            StockRelease.objects.create(
+                product=product,
+                store=store,
+                quantity=quantity,
+                release_type='sale',
+                release_date=timezone.now().date(),
+                note=f"온라인 주문: {sale.sale_number}",
+                created_by=request.user
+            )
+            
             total_amount += subtotal
         
         # 판매 금액 업데이트
@@ -248,6 +245,17 @@ def checkout(request):
         return render(request, 'mall/order_complete.html', {'sale': sale})
     
     # GET 요청 처리
+    cart_items = get_cart_items(cart)
+    total = sum(item['subtotal'] for item in cart_items)
+    
+    context = {
+        'cart_items': cart_items,
+        'total': total
+    }
+    return render(request, 'mall/checkout.html', context)
+
+def get_cart_items(cart):
+    """장바구니 아이템 정보를 가져오는 헬퍼 함수"""
     cart_items = []
     
     for item_key, item_data in cart.items():
@@ -256,8 +264,8 @@ def checkout(request):
         
         for option_id, value_id in item_data['options'].items():
             try:
-                option = ProductOption.objects.get(id=int(option_id))
-                option_value = ProductOptionValue.objects.get(id=int(value_id))
+                option = ProductOption.objects.get(id=int(option_id))  # id() 함수 호출 제거
+                option_value = ProductOptionValue.objects.get(id=int(value_id))  # id() 함수 호출 제거
                 selected_options.append({
                     'name': option.name,
                     'value': option_value.value,
@@ -279,10 +287,4 @@ def checkout(request):
             'subtotal': unit_price * item_data['quantity']
         })
     
-    total = sum(item['subtotal'] for item in cart_items)
-    
-    context = {
-        'cart_items': cart_items,
-        'total': total
-    }
-    return render(request, 'mall/checkout.html', context)
+    return cart_items
