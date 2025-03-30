@@ -1,0 +1,135 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}바코드 입고 처리{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <h2>바코드 입고 처리</h2>
+        </div>
+    </div>
+    
+    <!-- 바코드 입력 섹션 -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row align-items-end">
+                <div class="col-md-8">
+                    <div class="form-group mb-0">
+                        <label for="barcode-input">바코드 입력</label>
+                        <input type="text" id="barcode-input" class="form-control" placeholder="바코드를 스캔하거나 입력하세요" autofocus>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <button id="search-btn" class="btn btn-primary w-100">검색</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 입고 현황 섹션 -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="receipt-date">입고 일자</label>
+                        <input type="date" id="receipt-date" class="form-control" value="{{ today|date:'Y-m-d' }}">
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label>입고 총액</label>
+                        <h3 id="total-amount" class="form-control-plaintext text-primary">0원</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 입고 목록 테이블 섹션 -->
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">입고 상품 목록</h5>
+            <button id="save-all-btn" class="btn btn-success" disabled>입고 처리 완료</button>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped" id="receipt-table">
+                    <thead>
+                        <tr>
+                            <th>상품코드</th>
+                            <th>상품명</th>
+                            <th>매장</th>
+                            <th>입고단가</th>
+                            <th>입고수량</th>
+                            <th>입고금액</th>
+                            <th>비고</th>
+                            <th>액션</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- 상품이 추가될 위치 -->
+                    </tbody>
+                </table>
+            </div>
+            <div id="empty-message" class="text-center py-3">
+                <p class="text-muted">바코드를 스캔하여 상품을 추가하세요.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 상품 상세 정보 모달 -->
+<div class="modal fade" id="productDetailModal" tabindex="-1" role="dialog" aria-labelledby="productDetailModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="productDetailModalLabel">상품 상세 정보</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <img id="product-image" src="" alt="상품 이미지" class="img-fluid">
+                    </div>
+                    <div class="col-md-8">
+                        <table class="table table-sm">
+                            <tr>
+                                <th>상품코드:</th>
+                                <td id="modal-product-code"></td>
+                            </tr>
+                            <tr>
+                                <th>상품명:</th>
+                                <td id="modal-product-name"></td>
+                            </tr>
+                            <tr>
+                                <th>카테고리:</th>
+                                <td id="modal-product-category"></td>
+                            </tr>
+                            <tr>
+                                <th>바코드:</th>
+                                <td id="modal-product-barcode"></td>
+                            </tr>
+                            <tr>
+                                <th>판매가격:</th>
+                                <td id="modal-product-price"></td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">닫기</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'inventory/js/barcode_stock_in.js' %}"></script>
+{% endblock %}

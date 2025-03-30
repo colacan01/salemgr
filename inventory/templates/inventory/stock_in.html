@@ -1,0 +1,92 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>이미지 인식 상품 입고</h2>
+    
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="form-group">
+                <div id="image-container" class="mb-3">
+                    <div id="image-preview" class="image-preview-container">
+                        <div id="image-placeholder">
+                            <i class="fas fa-camera"></i>
+                            <p>터치하여 사진 촬영</p>
+                        </div>
+                        <img id="product-image" class="d-none" alt="상품 이미지">
+                    </div>
+                    <input type="file" id="image-upload" accept="image/*" capture="camera" class="d-none">
+                </div>
+                
+                <div class="loading-indicator d-none">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="sr-only">Loading...</span>
+                    </div>
+                    <p class="mt-2">상품 인식 중...</p>
+                </div>
+                
+                <input type="hidden" id="product-id">
+                
+                <div class="form-group">
+                    <label for="product-code">상품코드</label>
+                    <input type="text" class="form-control" id="product-code" readonly>
+                </div>
+                
+                <div class="form-group">
+                    <label for="product-name">상품명</label>
+                    <input type="text" class="form-control" id="product-name" readonly>
+                </div>
+                
+                <div class="form-group">
+                    <label for="category-name">카테고리</label>
+                    <input type="text" class="form-control" id="category-name" readonly>
+                </div>
+                
+                <div class="form-group">
+                    <label for="store">입고 매장</label>
+                    <select class="form-control" id="store">
+                        {% for store in stores %}
+                            <option value="{{ store.id }}">{{ store.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="cost-price">입고 단가</label>
+                    <input type="number" class="form-control" id="cost-price" min="0" step="0.01">
+                </div>
+                
+                <div class="form-group">
+                    <label for="quantity">입고 수량</label>
+                    <input type="number" class="form-control" id="quantity" min="1" value="1">
+                </div>
+                
+                <div class="form-group">
+                    <label for="receipt-date">입고일</label>
+                    <input type="date" class="form-control" id="receipt-date" value="{% now 'Y-m-d' %}">
+                </div>
+                
+                <div class="form-group">
+                    <label for="total-price">합계 금액</label>
+                    <input type="text" class="form-control" id="total-price" readonly>
+                </div>
+                
+                <div class="form-group">
+                    <label for="note">비고</label>
+                    <textarea class="form-control" id="note" rows="2"></textarea>
+                </div>
+                
+                <div class="btn-group w-100 mt-4">
+                    <button id="save-btn" class="btn btn-primary mr-2" disabled>확인</button>
+                    <button id="cancel-btn" class="btn btn-secondary">취소</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'inventory/js/stock_in.js' %}"></script>
+{% endblock %}

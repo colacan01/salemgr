@@ -49,4 +49,13 @@ urlpatterns = [
     path('api/product-stock/', views.get_product_stock, name='api_product_stock'),
     # 기존 URL 패턴에 추가
     path('api/last-cost-price/', views.get_last_cost_price, name='api_last_cost_price'),
+    
+    path('stock-in/image-recognition/', views.stock_in_view, name='stock_in_image'),
+    path('api/upload-image/', views.upload_image, name='upload_image'),
+    path('api/save-stock-in/', views.save_stock_in, name='save_stock_in'),
+    
+     # 바코드 입고 관련 URL
+    path('barcode-stock-in/', views.barcode_stock_in, name='barcode_stock_in'),
+    path('api/search-product-by-barcode/', views.search_product_by_barcode, name='search_product_by_barcode'),
+    path('api/save-stock-receipt/', views.save_stock_receipt, name='save_stock_receipt'),
 ]

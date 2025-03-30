@@ -1,3 +1,5 @@
+import os
+import json
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse_lazy
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
@@ -6,6 +8,11 @@ from django.db import models
 from django.db.models import Sum, Q, F
 from django.utils import timezone
 from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.conf import settings
+from django.core.files.storage import default_storage
+from django.core.files.base import ContentFile
+from django.contrib.auth.decorators import login_required
 
 from accounts.permissions import StoreStaffRequiredMixin, StoreManagerRequiredMixin
 from .models import (
@@ -17,6 +24,7 @@ from .forms import (
     StockReceiptForm, StockReleaseForm, StockAdjustmentForm
 )
 from accounts.models import Store
+from .utils import recognize_product
 
 # 카테고리 관리
 class CategoryListView(StoreStaffRequiredMixin, ListView):
@@ -321,34 +329,6 @@ class StockReceiptCreateView(StoreStaffRequiredMixin, CreateView):
     model = StockReceipt
     form_class = StockReceiptForm
     template_name = 'inventory/stock_receipt_form.html'
-    # success_url = reverse_lazy('inventory:stock_receipt_list')
-    
-    # def get_form_kwargs(self):
-    #     kwargs = super().get_form_kwargs()
-    #     kwargs['user'] = self.request.user
-        
-    #     # POST 요청이고 앱 관리자가 아니라면 매장을 자동 설정
-    #     if self.request.method == 'POST' and self.request.user.user_type != 'app_admin' and self.request.user.store:
-    #         if not kwargs.get('data'):
-    #             kwargs['data'] = self.request.POST.copy()
-    #         kwargs['data']['store'] = self.request.user.store.id
-            
-    #     return kwargs
-    
-    # def form_valid(self, form):
-    #     form.instance.created_by = self.request.user
-        
-    #     # 앱 관리자가 아니라면 매장을 자동 설정
-    #     if self.request.user.user_type != 'app_admin' and self.request.user.store:
-    #         form.instance.store = self.request.user.store
-            
-    #     messages.success(self.request, '상품 입고가 등록되었습니다.')
-    #     return super().form_valid(form)
-    
-    # def get_context_data(self, **kwargs):
-    #     context = super().get_context_data(**kwargs)
-    #     context['is_app_admin'] = self.request.user.user_type == 'app_admin'
-    #     return context
     
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
@@ -379,9 +359,6 @@ class StockReceiptCreateView(StoreStaffRequiredMixin, CreateView):
         context['is_app_admin'] = self.request.user.user_type == 'app_admin'
         context['user_store'] = self.request.user.store.id if self.request.user.store else None
         return context
-    
-    
-    
 
 class StockReceiptDetailView(StoreStaffRequiredMixin, DetailView):
     model = StockReceipt
@@ -506,6 +483,117 @@ def stock_receipt_create(request):
     
     return render(request, 'inventory/stock_receipt_form.html', context)
 
+@login_required
+def barcode_stock_in(request):
+    """바코드를 이용한 입고처리 페이지 뷰"""
+    # 사용자 권한에 따라 매장 목록 조정
+    user = request.user
+    if user.is_superuser or hasattr(user, 'is_admin') and user.is_admin:
+        # 관리자는 모든 매장 선택 가능
+        stores = Store.objects.all()
+    elif hasattr(user, 'store'):
+        # 매장 관리자나 직원은 자신의 매장만
+        stores = [user.store]
+    else:
+        stores = []
+        
+    context = {
+        'stores': stores,
+        'today': timezone.now().date(),
+    }
+    return render(request, 'inventory/barcode_stock_in.html', context)
+
+def search_product_by_barcode(request):
+    """바코드로 상품 검색 API"""
+    barcode = request.GET.get('barcode', '')
+    if not barcode:
+        return JsonResponse({'success': False, 'message': '바코드를 입력해주세요.'})
+    
+    try:
+        # 바코드로 상품 검색
+        product = get_object_or_404(Product, barcode=barcode, is_active=True)
+        
+        # 마지막 입고 가격 조회
+        last_receipt = StockReceipt.objects.filter(product=product).order_by('-receipt_date').first()
+        last_cost_price = last_receipt.cost_price if last_receipt else 0
+        
+        # 현재 판매 가격 조회
+        current_price = product.get_current_price()
+        
+        # 응답 데이터 구성
+        data = {
+            'success': True,
+            'product': {
+                'id': product.id,
+                'code': product.code,
+                'name': product.name,
+                'category': product.category.name if product.category else '',
+                'barcode': product.barcode,
+                'last_cost_price': float(last_cost_price),
+                'current_price': float(current_price) if current_price else 0,
+                'image': product.image.url if product.image else None,
+                'store_id': product.store.id if product.store else None,
+            }
+        }
+        return JsonResponse(data)
+    
+    except Product.DoesNotExist:
+        return JsonResponse({'success': False, 'message': '해당 바코드의 상품을 찾을 수 없습니다.'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': f'오류가 발생했습니다: {str(e)}'})
+
+@login_required
+def save_stock_receipt(request):
+    """입고 정보 저장 API"""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': '올바른 요청이 아닙니다.'})
+    
+    try:
+        data = json.loads(request.body)
+        receipts = data.get('receipts', [])
+        receipt_date = data.get('receipt_date')
+        
+        if not receipts:
+            return JsonResponse({'success': False, 'message': '입고할 상품이 없습니다.'})
+        
+        saved_receipts = []
+        for item in receipts:
+            product_id = item.get('product_id')
+            store_id = item.get('store_id')
+            quantity = int(item.get('quantity', 0))
+            cost_price = float(item.get('cost_price', 0))
+            note = item.get('note', '')
+            
+            if not all([product_id, store_id, quantity, cost_price]):
+                continue
+                
+            product = get_object_or_404(Product, id=product_id)
+            store = get_object_or_404(Store, id=store_id)
+            
+            # 입고정보 저장
+            receipt = StockReceipt.objects.create(
+                product=product,
+                store=store,
+                quantity=quantity,
+                cost_price=cost_price,
+                receipt_date=receipt_date,
+                note=note,
+                created_by=request.user
+            )
+            saved_receipts.append(receipt.id)
+        
+        if saved_receipts:
+            return JsonResponse({
+                'success': True, 
+                'message': f'{len(saved_receipts)}개 상품의 입고 정보가 저장되었습니다.',
+                'receipt_ids': saved_receipts
+            })
+        else:
+            return JsonResponse({'success': False, 'message': '저장할 입고 정보가 없습니다.'})
+            
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': f'오류가 발생했습니다: {str(e)}'})
+
 # 출고 관리
 class StockReleaseListView(StoreStaffRequiredMixin, ListView):
     model = StockRelease
@@ -513,45 +601,6 @@ class StockReleaseListView(StoreStaffRequiredMixin, ListView):
     context_object_name = 'releases'
     paginate_by = 10
     
-    # def get_queryset(self):
-    #     queryset = super().get_queryset()
-    #     search_query = self.request.GET.get('search', '')
-    #     start_date = self.request.GET.get('start_date', '')
-    #     end_date = self.request.GET.get('end_date', '')
-    #     store_id = self.request.GET.get('store', '')
-    #     release_type = self.request.GET.get('release_type', '')
-        
-    #     if search_query:
-    #         queryset = queryset.filter(
-    #             Q(product__name__icontains=search_query) |
-    #             Q(product__code__icontains=search_query)
-    #         )
-        
-    #     if start_date:
-    #         queryset = queryset.filter(release_date__gte=start_date)
-            
-    #     if end_date:
-    #         queryset = queryset.filter(release_date__lte=end_date)
-            
-    #     if store_id:
-    #         queryset = queryset.filter(store_id=store_id)
-            
-    #     if release_type:
-    #         queryset = queryset.filter(release_type=release_type)
-            
-    #     return queryset
-    
-    # def get_context_data(self, **kwargs):
-    #     context = super().get_context_data(**kwargs)
-    #     from accounts.models import Store
-    #     context['stores'] = Store.objects.all()
-    #     context['release_types'] = dict(StockRelease.RELEASE_TYPE_CHOICES)
-    #     context['search_query'] = self.request.GET.get('search', '')
-    #     context['start_date'] = self.request.GET.get('start_date', '')
-    #     context['end_date'] = self.request.GET.get('end_date', '')
-    #     context['selected_store'] = self.request.GET.get('store', '')
-    #     context['selected_release_type'] = self.request.GET.get('release_type', '')
-    #     return context
     def get_queryset(self):
         queryset = StockRelease.objects.all().order_by('-release_date', '-created_at')
         
@@ -767,46 +816,6 @@ class StockAdjustmentListView(StoreStaffRequiredMixin, ListView):
     context_object_name = 'adjustments'
     paginate_by = 10
     
-    # def get_queryset(self):
-    #     queryset = super().get_queryset()
-    #     search_query = self.request.GET.get('search', '')
-    #     start_date = self.request.GET.get('start_date', '')
-    #     end_date = self.request.GET.get('end_date', '')
-    #     store_id = self.request.GET.get('store', '')
-    #     adjustment_type = self.request.GET.get('adjustment_type', '')
-        
-    #     if search_query:
-    #         queryset = queryset.filter(
-    #             Q(product__name__icontains=search_query) |
-    #             Q(product__code__icontains=search_query) |
-    #             Q(reason__icontains=search_query)
-    #         )
-        
-    #     if start_date:
-    #         queryset = queryset.filter(adjustment_date__gte=start_date)
-            
-    #     if end_date:
-    #         queryset = queryset.filter(adjustment_date__lte=end_date)
-            
-    #     if store_id:
-    #         queryset = queryset.filter(store_id=store_id)
-            
-    #     if adjustment_type:
-    #         queryset = queryset.filter(adjustment_type=adjustment_type)
-            
-    #     return queryset
-    
-    # def get_context_data(self, **kwargs):
-    #     context = super().get_context_data(**kwargs)
-    #     from accounts.models import Store
-    #     context['stores'] = Store.objects.all()
-    #     context['adjustment_types'] = dict(StockAdjustment.ADJUSTMENT_TYPE_CHOICES)
-    #     context['search_query'] = self.request.GET.get('search', '')
-    #     context['start_date'] = self.request.GET.get('start_date', '')
-    #     context['end_date'] = self.request.GET.get('end_date', '')
-    #     context['selected_store'] = self.request.GET.get('store', '')
-    #     context['selected_adjustment_type'] = self.request.GET.get('adjustment_type', '')
-    #     return context
     def get_queryset(self):
         queryset = StockAdjustment.objects.all().order_by('-adjustment_date', '-created_at')
         
@@ -1162,3 +1171,110 @@ def get_last_cost_price(request):
         })
     else:
         return JsonResponse({'cost_price': None, 'last_receipt_date': None})
+
+def stock_in_view(request):
+    """상품 입고 페이지 뷰"""
+    # 현재 사용자의 매장 정보 가져오기
+    stores = Store.objects.all()
+    context = {
+        'stores': stores
+    }
+    return render(request, 'inventory/stock_in.html', context)
+
+@csrf_exempt
+def upload_image(request):
+    """이미지 업로드 처리 API"""
+    if request.method == 'POST' and request.FILES.get('image'):
+        image_file = request.FILES['image']
+        # 임시 파일로 저장
+        path = default_storage.save(f'tmp/{image_file.name}', ContentFile(image_file.read()))
+        temp_file_path = os.path.join(settings.MEDIA_ROOT, path)
+        
+        # 이미지로 상품 인식
+        product = recognize_product(temp_file_path)
+        
+        # 인식 결과 반환
+        if product:
+            # 현재 가격 정보 가져오기
+            current_price = product.get_current_price()
+            
+            # 마지막 입고 가격 가져오기
+            last_receipt = StockReceipt.objects.filter(product=product).order_by('-receipt_date').first()
+            last_cost_price = last_receipt.cost_price if last_receipt else 0
+            
+            # 상품에 연결된 매장 정보 가져오기
+            stores = []
+            if product.store:
+                stores.append({
+                    'id': product.store.id,
+                    'name': product.store.name
+                })
+            else:
+                # 상품에 특정 매장이 없으면 모든 매장 표시
+                stores = [{
+                    'id': store.id,
+                    'name': store.name
+                } for store in Store.objects.all()]
+            
+            response_data = {
+                'success': True,
+                'product_id': product.id,
+                'product_code': product.code,
+                'product_name': product.name,
+                'category': product.category.name if product.category else '',
+                'stores': stores,
+                'current_price': float(current_price) if current_price else 0,
+                'last_cost_price': float(last_cost_price),
+                'image_url': product.image.url if product.image else os.path.join(settings.MEDIA_URL, path)
+            }
+        else:
+            response_data = {
+                'success': False,
+                'message': '상품을 인식할 수 없습니다.',
+                'image_url': os.path.join(settings.MEDIA_URL, path)
+            }
+        
+        return JsonResponse(response_data)
+    
+    return JsonResponse({'success': False, 'message': '올바른 요청이 아닙니다.'})
+
+@csrf_exempt
+def save_stock_in(request):
+    """입고 정보 저장 API"""
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            product_id = data.get('product_id')
+            store_id = data.get('store_id')
+            quantity = int(data.get('quantity', 0))
+            cost_price = float(data.get('cost_price', 0))
+            receipt_date = data.get('receipt_date', timezone.now().strftime('%Y-%m-%d'))
+            note = data.get('note', '')
+            
+            if not all([product_id, store_id, quantity, cost_price]):
+                return JsonResponse({'success': False, 'message': '필수 정보가 누락되었습니다.'})
+            
+            product = get_object_or_404(Product, id=product_id)
+            store = get_object_or_404(Store, id=store_id)
+            
+            # 입고정보 저장
+            receipt = StockReceipt.objects.create(
+                product=product,
+                store=store,
+                quantity=quantity,
+                cost_price=cost_price,
+                receipt_date=receipt_date,
+                note=note,
+                created_by=request.user if request.user.is_authenticated else None
+            )
+            
+            return JsonResponse({
+                'success': True, 
+                'receipt_id': receipt.id,
+                'message': '입고 정보가 저장되었습니다.'
+            })
+        
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': f'오류가 발생했습니다: {str(e)}'})
+    
+    return JsonResponse({'success': False, 'message': '올바른 요청이 아닙니다.'})
