@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const totalAmountEl = document.getElementById('total-amount');
     const receiptDateInput = document.getElementById('receipt-date');
     const saveAllBtn = document.getElementById('save-all-btn');
+    const storeSelect = document.getElementById('store-select'); // 매장 선택 요소 추가
     
     // 상품 목록 관리
     let receiptItems = [];
@@ -29,6 +30,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // 바코드로 상품 검색 함수
     function searchProduct() {
         const barcode = barcodeInput.value.trim();
+        const storeId = storeSelect.value; // 매장 ID 가져오기
+        
         if (!barcode) {
             alert('바코드를 입력해주세요.');
             return;
@@ -38,8 +41,8 @@ document.addEventListener('DOMContentLoaded', function() {
         searchBtn.disabled = true;
         searchBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> 검색 중...';
         
-        // API 호출
-        fetch(`/inventory/api/search-product-by-barcode/?barcode=${barcode}`)
+        // API 호출 - store_id 파라미터 추가
+        fetch(`/inventory/api/search-product-by-barcode/?barcode=${encodeURIComponent(barcode)}&store_id=${encodeURIComponent(storeId)}`)
             .then(response => response.json())
             .then(data => {
                 // 로딩 표시 제거
@@ -60,7 +63,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             product_id: data.product.id,
                             product_code: data.product.code,
                             product_name: data.product.name,
-                            store_id: data.product.store_id || getDefaultStoreId(),
+                            store_id: data.product.store_id || storeId, // 매장 ID 설정 수정
                             cost_price: data.product.last_cost_price || 0,
                             quantity: 1,
                             note: '',
@@ -350,16 +353,15 @@ document.addEventListener('DOMContentLoaded', function() {
     function getStoreList() {
         // 이 함수는 서버에서 전달받은 매장 목록을 반환해야 함
         // 예시 데이터 - 실제로는 서버에서 전달받은 데이터를 사용
-        return Array.from(document.querySelectorAll('#store option')).map(option => ({
+        return Array.from(document.querySelectorAll('#store-select option')).map(option => ({
             id: parseInt(option.value),
-            name: option.textContent
+            name: option.textContent.trim().replace(/\s+/g, ' ')
         }));
     }
     
-    // 기본 매장 ID 가져오기
+    // 기본 매장 ID 가져오기 수정
     function getDefaultStoreId() {
-        const stores = getStoreList();
-        return stores.length > 0 ? stores[0].id : null;
+        return storeSelect.value; // 현재 선택된 매장 ID 반환
     }
     
     // 금액 포맷팅

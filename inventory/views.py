@@ -506,12 +506,31 @@ def barcode_stock_in(request):
 def search_product_by_barcode(request):
     """바코드로 상품 검색 API"""
     barcode = request.GET.get('barcode', '')
+    store_id = request.GET.get('store_id', None)  # 매장 ID 파라미터 추가
+    
     if not barcode:
         return JsonResponse({'success': False, 'message': '바코드를 입력해주세요.'})
     
     try:
-        # 바코드로 상품 검색
-        product = get_object_or_404(Product, barcode=barcode, is_active=True)
+        # 기본 검색 조건
+        query_conditions = {'barcode': barcode, 'is_active': True}
+        
+        # 매장 필터 추가
+        if store_id:
+            # 매장 ID가 주어진 경우:
+            # 1. 해당 매장에 속한 상품만 검색하거나
+            # 2. 매장이 설정되지 않은(전체 매장용) 상품 검색
+            query_conditions.update({'store_id': store_id})
+            product = Product.objects.filter(
+                models.Q(**query_conditions) | 
+                models.Q(barcode=barcode, is_active=True, store__isnull=True)
+            ).first()
+            
+            if not product:
+                return JsonResponse({'success': False, 'message': '해당 바코드의 상품을 찾을 수 없거나 선택한 매장에서 취급하지 않는 상품입니다.'})
+        else:
+            # 매장 ID가 없는 경우, 기존 로직대로 검색
+            product = get_object_or_404(Product, **query_conditions)
         
         # 마지막 입고 가격 조회
         last_receipt = StockReceipt.objects.filter(product=product).order_by('-receipt_date').first()
@@ -532,7 +551,7 @@ def search_product_by_barcode(request):
                 'last_cost_price': float(last_cost_price),
                 'current_price': float(current_price) if current_price else 0,
                 'image': product.image.url if product.image else None,
-                'store_id': product.store.id if product.store else None,
+                'store_id': product.store.id if product.store else (store_id if store_id else None),
             }
         }
         return JsonResponse(data)

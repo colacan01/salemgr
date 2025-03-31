@@ -10,7 +10,24 @@
             <h2>바코드 입고 처리</h2>
         </div>
     </div>
-    
+ 
+    <!-- 매장 선택 섹션 추가 -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="form-group">
+                <label for="store-select">매장 선택</label>
+                <select id="store-select" class="form-control" {% if not request.user.user_type == 'app_admin' %}disabled{% endif %}>
+                    {% for store in stores %}
+                        <option value="{{ store.id }}" 
+                            {% if request.user.user_type != 'app_admin' and request.user.store.id == store.id %}selected{% endif %}>
+                            {{ store.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+    </div>
+
     <!-- 바코드 입력 섹션 -->
     <div class="card mb-4">
         <div class="card-body">
