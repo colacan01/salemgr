@@ -109,6 +109,12 @@ yarn-error.log*
 pyvenv.cfg
 manage.py
 Scripts/
+nginx.conf
+
+.dockerignore
+docker-compose.yml
+dockerfile
+entrypoint.sh
 
 # Security Key
 *.pem
