@@ -29,7 +29,17 @@ ALLOWED_HOSTS = [
     '127.0.0.1',
     'localhost',
     '172.30.1.51',
-    'salemgr.doit-partner.com',
+    'salemgr.doit-partners.com',
+]
+
+CSRF_TRUSTED_ORIGINS = [
+        'http://172.30.1.51:8000',
+        'http://172.30.1.51',
+        'http://salemgr.doit-partners.com'
+        'http://localhost',
+        'http://127.0.0.1'
+    # 'https://yourdomain.com', # 실제 운영 환경의 도메인도 필요하면 추가
+    # 다른 신뢰하는 출처가 있다면 여기에 추가
 ]
 
 
@@ -53,6 +63,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -144,3 +155,11 @@ MEDIA_ROOT = BASE_DIR / 'media'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 AUTH_USER_MODEL = 'accounts.User'
+
+CORS_ALLOWED_ORIGINS = [
+    'http://172.30.1.51:8000', # 이전에 CSRF 오류가 발생했던 Origin
+    'http://localhost:8000',    # 예: React 개발 서버
+    'http://127.0.0.1:8080',   # 예: Vue 개발 서버
+    'http://salemgr.doit-partners.com', # 실제 운영 프론트엔드 도메인
+]
+ 
