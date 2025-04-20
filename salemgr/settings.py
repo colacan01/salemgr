@@ -36,8 +36,9 @@ CSRF_TRUSTED_ORIGINS = [
         'http://172.30.1.51:8000',
         'http://172.30.1.51',
         'http://salemgr.doit-partners.com'
-        'http://localhost',
-        'http://127.0.0.1'
+        'http://localhost:8000',
+        'http://127.0.0.1:8000',
+        
     # 'https://yourdomain.com', # 실제 운영 환경의 도메인도 필요하면 추가
     # 다른 신뢰하는 출처가 있다면 여기에 추가
 ]
@@ -99,8 +100,12 @@ WSGI_APPLICATION = 'salemgr.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'db_salemgr',
+        'USER': 'salemgr',
+        'PASSWORD': 'salemgr',
+        'HOST': '172.30.1.58',
+        'PORT': '5432',
     }
 }
 
