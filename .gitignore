@@ -116,6 +116,11 @@ docker-compose.yml
 dockerfile
 entrypoint.sh
 
+db_dump.json
+requirements.txt
+.gitignore
+
+
 # Security Key
 *.pem
 *.key
