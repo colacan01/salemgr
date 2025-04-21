@@ -116,6 +116,8 @@ docker-compose.yml
 dockerfile
 entrypoint.sh
 
+# github copilot
+.github/
 # Security Key
 *.pem
 *.key
