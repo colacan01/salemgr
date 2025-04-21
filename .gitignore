@@ -121,6 +121,8 @@ requirements.txt
 .gitignore
 
 
+# github copilot
+.github/
 # Security Key
 *.pem
 *.key
